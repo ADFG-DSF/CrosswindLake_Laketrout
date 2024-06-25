@@ -170,7 +170,11 @@ qnorm(0.975)*sd(pwts)/(.075*mean(pwts))^2  # no idea what this is
 # wts <- rnorm(n=100, mean=mean(pwts), sd=sd(pwts))
 nsim <- 10000
 n <- 100  # sample size to draw
-YPn1 <- YPn2 <- YPn1_unb <- YPn2_unb <- vYPn1 <- vYPn2 <- mnwts1 <- mnwts2 <- rep(NA, nsim)
+YPn1 <- YPn2 <-
+  YPn1_unb <- YPn2_unb <-
+  vYPn1 <- vYPn2 <-
+  mnwts1 <- mnwts2 <-
+  vmnwts1 <- vmnwts2 <-rep(NA, nsim)
 for(isim in 1:nsim) {
   simwts1 <- rnorm(n=n, mean=mean(pwts), sd=sd(pwts))
   simwts2 <- sample(pwts, size=n, replace=TRUE)
@@ -181,10 +185,10 @@ for(isim in 1:nsim) {
   YPn1[isim] <- YPhat/mnwts1[isim]
   YPn2[isim] <- YPhat/mnwts2[isim]
   YPn1_unb[isim] <- YPhat/mnwts1[isim] + YPhat/(mnwts1[isim]^3)*vmnwts1[isim]
-  YPn2_unb[isim] <- YPhat/mnwts2[isim] + YPhat/(mnwts2[isim]^3)*vmnwts2[isim]   
+  YPn2_unb[isim] <- YPhat/mnwts2[isim] + YPhat/(mnwts2[isim]^3)*vmnwts2[isim]
   ## from this, it looks like it should be minus, not plus.  But from below
   ## it should actually be plus like in the OP.
-  
+
   vYPn1[isim] <- (YPhat^2)/(mnwts1[isim]^4)*vmnwts1[isim]
   vYPn2[isim] <- (YPhat^2)/(mnwts2[isim]^4)*vmnwts2[isim]
 }
@@ -225,9 +229,9 @@ abline(v=1/mean(x) + 1/((mean(x)^3))*var(x), lty=3, col=4)  # it should actually
 #' @param max_depth (numeric) Maximum lake depth (in m)
 #' @param return_df (logical) Whether to return a data.frame including lake parameters (TRUE)
 #' @param or just a vector of MSY in kg/(ha-yr)
-#' @return vector of MSY in kg/(ha-yr), or data.frame with lake  
-#' @export 
-#' @examples  
+#' @return vector of MSY in kg/(ha-yr), or data.frame with lake
+#' @export
+#' @examples
 #' lake <- c("Crosswind", "Fielding", "Glacier Gap", "Louise", "Paxson", "Little Sevenmile", "Summit", "Susitna", "Round Tangle", "Shallow Tangle", "Combined Tangle")
 #' temp <- c(-3.04, -5.89, -7.13, -3.29, -4.15, -5.89, -5.89, -3.29, -7.13, -7.13, -7.13)
 #' area <- c(3716.55, 561.96, 178.06, 5913.07, 1569.92, 35.13, 1770.12, 3635.16, 156.15, 129.5, 285.65)
@@ -289,3 +293,4 @@ area <- c(3716.55, 561.96, 178.06, 5913.07, 1569.92, 35.13, 1770.12, 3635.16, 15
 mean_depth <- c(15.9, 8.7, 7.1, 13, 8.4, 4.4, 15.6, 9, 10, 2, 6.4)
 max_depth <- c(36.6, 23.1, 24.4, 51, 29.7, 14.1, 63.4, 36.6, 27.3, 19.8, 27.3)
 aaa<-lester_msy(lake, temp, area, mean_depth, max_depth, return_df = T)
+

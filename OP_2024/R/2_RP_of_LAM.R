@@ -1,6 +1,18 @@
+## Relative Precision of Lake Area Model
+
+## The purpose of this script is to simulate the estimation (prediction) variance
+## associated with applying the Lake Area Model to a new lake.
+
+## First, the residual standard deviation of the LAM reported by Evans, et al. was
+## estimated by trial and error (trying values until the model R^2 matched what
+## was reported)
+
+# load packages
+library(tidyverse)
+library(dsftools)
 
 
-## (3) incorporating the variance within the Lake Area Model
+## (3) approximating the variance within the Lake Area Model
 newlake_la <- 3717  # Crosswind
 
 ## all lake areas reported in Evans et al (LA model)
@@ -26,8 +38,8 @@ epssd <- 0.305
 n <- 10000
 b0 <- b1 <- r2 <- predvar <- rep(NA,n)
 
-# ## would really like to visualize this relationship
-# all_la <- all_log10_la <- all_log10_yp <- all_yp <- matrix(nrow=n, ncol=43)
+## would really like to visualize this relationship
+all_la <- all_log10_la <- all_log10_yp <- all_yp <- matrix(nrow=n, ncol=43)
 
 for(i in 1:n) {
   x <- sample(lareg, 43)
@@ -42,12 +54,15 @@ for(i in 1:n) {
   r2[i] <- summary(mod)$r.squared
   predvar[i] <- epssd^2 + predict(mod,newdata=data.frame(log10x=log10(newlake_la)),se.fit=T)$se.fit^2
 
-  # # storing stuff to plot
-  # all_la[i,] <- x
-  # all_log10_la[i,] <- log10(x)
-  # all_log10_yp[i,] <- log10YPsim
-  # all_yp[i,] <- 10^log10YPsim
+  # storing stuff to plot
+  all_la[i,] <- x
+  all_log10_la[i,] <- log10(x)
+  all_log10_yp[i,] <- log10YPsim
+  all_yp[i,] <- 10^log10YPsim
 }
+
+# plotting regression coefficients and R^2 values, to verify that they match
+# the values reported by Evans, et al.
 par(mfrow=c(2,2))
 hist(b0)
 abline(v=.6)
@@ -69,11 +84,23 @@ predvarsim <- median(predvar)   # [1] 0.09958763
 predlog10YP <- rnorm(n, 0.6 + 0.72*log10(newlake_la), sqrt(predvarsim))
 hist(predlog10YP)
 
-# -(mean(predlog10YP) - quantile(predlog10YP,0.975))/mean(predlog10YP)  # not sure what this does
+# quick function to return relative precision from a vector of simulations
+rp <- function(vec, trueval, q=0.95) {
+  quantile(abs(vec-trueval)/trueval, q)
+}
+
+rp(vec=predlog10YP, trueval=median(predlog10YP))  # 20%
 
 ## back to natural scale
 predYP <- 10^predlog10YP
 hist(predYP)
+
+rp(vec=predYP, trueval=median(predYP))  # 240%
+
+quantile(predYP, c(0.025,0.975))/median(predYP)
+#        2.5%     97.5%
+#   0.2382935 4.1333496
+
 
 # ## prediction interval on the natural scale, relative to median
 # quantile(predYP,c(0.025,0.975))/median(predYP)
@@ -86,9 +113,11 @@ hist(predYP)
 
 
 
-# or maybe would be better to do a prediction interval on the log scale and backtransform
+# visualizing by doing a prediction interval on the log scale and backtransform
+
+# CI on log scale & natural scale
 CIlog <- 0.6 + 0.72*log10(newlake_la) + c(-1,1)*qnorm(0.95)*sqrt(predvarsim)
-10^CIlog
+CInat <- 10^CIlog
 
 
 par(mfrow=c(1,2))
@@ -104,4 +133,64 @@ plot(as.numeric(all_la)[1:200], as.numeric(all_yp)[1:200],
 for(i in 1:100) curve(10^(b0[i]+b1[i]*log10(x)), add=TRUE, col=adjustcolor(4,alpha.f=.2))
 curve(10^(.6+.72*log10(x)), add=TRUE, lwd=2)
 # abline(v=newlake_la)
-lines(x=rep(newlake_la,2), y=10^CIlog, lwd=4, col=4, lend=2)
+lines(x=rep(newlake_la,2), y=CInat, lwd=4, col=4, lend=2)
+
+
+
+## (4) Propegating the LAM variance to RP of YP in number of fish
+
+# sampling (actually resampling) from weights at Fielding Lake
+laketrout_all <- read_csv("OP_2024/flat_data/all_lakes/length_weight2.csv", skip=2)
+
+justFielding <- laketrout_all %>% filter(LakeName=="Fielding Lake" & !is.na(Weight_g))
+# nrow(justFielding)  # 625
+F_wts <- justFielding$Weight_g
+
+
+# simulating a vector of estimated mean weights, as well as a vector of true mean weights
+# note: these will be applied to the vector of predicted YP simulated earlier
+
+#### FINAL WORST-CASE SCENARIO TO PUT IN THE OP PLAN:
+#### - weight adjustment of 67% & 133%  (mean weight of March sample is twice as big as June)
+#### - beta parameters of 20 (80% chance that March harvest is between 40% and 60% of total)
+
+strat_wts <- c(1, 1)  ## relative weights for each stratum
+wt_adj <- 1 + c(-1, 1)*.33  ## (multiplicative) weight adjustment for each stratum?
+betap_fixed <- 20
+nsim <- length(predYP)
+av_wt1 <- av_wt2 <- est_mn <- rep(NA, nsim)  # initializing vectors
+n1 <- n2 <- 100
+for(i_sim in 1:nsim) {
+  av_wt1[i_sim] <- mean(sample(F_wts*wt_adj[1], size=n1, replace=TRUE))
+  av_wt2[i_sim] <- mean(sample(F_wts*wt_adj[2], size=n2, replace=TRUE))
+  est_mn[i_sim] <- sum(c(av_wt1[i_sim], av_wt2[i_sim])*strat_wts/sum(strat_wts))
+}
+# strat_wts_true <- rep(NA, 2)
+# strat_wts_true[1] <- rbeta(1, betap[i_amount], betap[i_amount])
+# strat_wts_true[2] <- 1-strat_wts_true[1]
+beta1 <- rbeta(nsim, betap_fixed, betap_fixed)
+beta2 <- 1-beta1
+mn_true <- rep(NA, nsim)
+for(i in 1:nsim) {
+  strat_wts_true <- c(beta1[i], beta2[i])
+  mn_true[i] <- sum(strat_wts_true*wt_adj*mean(F_wts)/sum(strat_wts_true))
+}
+
+hist(predYP/est_mn)
+hist(log(predYP/est_mn))
+
+# relative precision incorporating variability from LAM as well as weight sampling
+rp(vec = predYP/est_mn,
+   trueval = median(predYP)/mn_true)  # 235%!!
+quantile((predYP/est_mn)/(median(predYP)/mn_true), c(0.025, 0.975))
+
+# relative precision treating LAM as constant
+rp(vec = median(predYP)/est_mn,
+   trueval = median(predYP)/mn_true)  # 15% is a little more friendly
+#      2.5%     97.5%
+# 0.2329519 4.1649215
+
+# treating Lester as constant: MSY should be some fraction of YP but unknown
+# will it behave the same way?
+rp(vec = 0.5*median(predYP)/est_mn,
+   trueval = 0.5*median(predYP)/mn_true)  # 15% - yes
