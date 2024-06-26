@@ -70,16 +70,14 @@ hist(est_mn)
 mn_true <- sum(strat_wts*wt_adj*mean(F_wts)/sum(strat_wts))
 abline(v=mn_true, col=2, lty=2, lwd=2)
 
-###### think through the syntax of pulling confidence out for desired RP (or vice versa)
-###### turn this into a dsftools function!!
 
-# or not
+# relative accuracy in this case
 quantile(abs(est_mn-mn_true)/mn_true, .95)    # 12%
 
 
 ## let's try a bunch of versions of weight adjustment..
-adj_amount <- seq(0, .99, by=.01)
-quantile_vec <- rep(NA, length(adj_amount))
+adj_amount <- seq(0, .99, by=.01)  # multiplicative adjustment amounts to consider
+quantile_vec <- rep(NA, length(adj_amount))  # corresponding vector of 95th percentile values of relative accuracy
 for(i_amount in seq_along(adj_amount)) {
   strat_wts <- c(1, 1)  ## relative weights for each stratum
   wt_adj <- 1 + c(-1, 1)*adj_amount[i_amount]  ## (multiplicative) weight adjustment for each stratum?
@@ -113,6 +111,11 @@ curve(dbeta(x,5,5), add=TRUE, col=4)
 bp <- c(50,20,10,5)
 legend("topleft", col=1:4, lty=1,
        legend=paste0("beta(", bp, ",", bp, ")"))
+
+# further interpretation of a beta(20,20)
+pbeta(.6, 20, 20) - pbeta(.4, 20, 20)  # 0.7958827
+pbeta(.65, 20, 20) - pbeta(.35, 20, 20) # 0.9464266
+
 
 ## ok let's actually do it now
 betap <- 1:50 # candidate values for beta parameters

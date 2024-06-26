@@ -95,25 +95,16 @@ rp(vec=predlog10YP, trueval=median(predlog10YP))  # 20%
 predYP <- 10^predlog10YP
 hist(predYP)
 
-rp(vec=predYP, trueval=median(predYP))  # 240%
+rp(vec=predYP, trueval=median(predYP))  # 240%, yikes
 
 quantile(predYP, c(0.025,0.975))/median(predYP)
 #        2.5%     97.5%
 #   0.2382935 4.1333496
 
 
-# ## prediction interval on the natural scale, relative to median
-# quantile(predYP,c(0.025,0.975))/median(predYP)
-#
-# ## simulating a vector of weights ... and doing something with it
-# wts <- rnorm(n, 1, 1/sqrt(100))
-# predYPn <- predYP/wts
-# hist(predYPn)
-# sd(predYPn)/mean(predYPn)
 
 
-
-# visualizing by doing a prediction interval on the log scale and backtransform
+# visualizing by doing a prediction interval on the log scale and backtransforming
 
 # CI on log scale & natural scale
 CIlog <- 0.6 + 0.72*log10(newlake_la) + c(-1,1)*qnorm(0.95)*sqrt(predvarsim)
@@ -150,7 +141,7 @@ F_wts <- justFielding$Weight_g
 # simulating a vector of estimated mean weights, as well as a vector of true mean weights
 # note: these will be applied to the vector of predicted YP simulated earlier
 
-#### FINAL WORST-CASE SCENARIO TO PUT IN THE OP PLAN:
+#### FINAL WORST-CASE SCENARIO TO PUT IN THE OP PLAN (copied from 1_RP_of_MnWeight.R):
 #### - weight adjustment of 67% & 133%  (mean weight of March sample is twice as big as June)
 #### - beta parameters of 20 (80% chance that March harvest is between 40% and 60% of total)
 
@@ -191,6 +182,6 @@ rp(vec = median(predYP)/est_mn,
 # 0.2329519 4.1649215
 
 # treating Lester as constant: MSY should be some fraction of YP but unknown
-# will it behave the same way?
+# will it behave the same way?  Looks like it.
 rp(vec = 0.5*median(predYP)/est_mn,
    trueval = 0.5*median(predYP)/mn_true)  # 15% - yes

@@ -2,7 +2,7 @@
 
 ## Overview
 
-This study will use 2 different models to estimate sustainable yield of lake trout Salvelinus namaycush from Crosswind Lake. The lake area (LA) model was developed from data compiled from 43 lakes located in Ontario, Canada and predicts yield potential (YP) from the surface area of a given lake. The Lester model is a newer, more comprehensive model that considers information from 456 lakes throughout Canada including the Yukon Territories and Northwest Territories. Unlike the LA model, the Lester model estimates maximum sustained yield (MSY), which is much different from YP, and of more use to fishery managers. The output from both models is in kg biomass, so the mean weight of lake trout subject to removal from Crosswind Lake needs to be estimated to convert biomass into total number of fish. This study will use lake trout catch data from winter (March) and summer (June) sampling to estimate mean weight, and the bottom of Crosswind Lake will be mapped to provide specific input variables for the models. The data collected will be used to further specify the Lester model with information from an Alaska lake . Estimates of yield will be used to evaluate the sustainability of the current sport fishery and to address any potential proposals to liberalize and/or restrict this fishery.
+This study will use 2 different models to estimate sustainable yield of lake trout Salvelinus namaycush from Crosswind Lake. The lake area (LA) model was developed from data compiled from 43 lakes located in Ontario, Canada and predicts yield potential (YP) from the surface area of a given lake. The Lester model is a newer, more comprehensive model that considers information from 456 lakes throughout Canada including the Yukon Territories and Northwest Territories. Unlike the LA model, the Lester model estimates maximum sustained yield (MSY), which is much different from YP, and of more use to fishery managers. The output from both models is in kg biomass, so the mean weight of lake trout subject to removal from Crosswind Lake needs to be estimated to convert biomass into total number of fish. This study will use lake trout catch data from winter (March) and summer (June) sampling to estimate mean weight, and the bottom of Crosswind Lake will be mapped to provide specific input variables for the models. The data collected will be used to apply the Lester model to information from an Alaska lake, which may provide additional insights to its suitability for management of lake trout in Alaska, and suggest further refinements to its adaptation . Estimates of yield will be used to evaluate the sustainability of the current sport fishery and to address any potential proposals to liberalize and/or restrict this fishery.
 
 ## Directory Structure
 
@@ -14,7 +14,11 @@ This study will use 2 different models to estimate sustainable yield of lake tro
 
 -   **/comparable_op** contains miscellaneous materials from a similar Operational Plan, which most of the R code was adapted from
 
--   **/Lester_model_background** contains some background material specific to the Lester model.  It is likely that many of the materials contained here are not on the Github repository.
+-   **/Lester_model_background** contains some background material specific to the Lester model.  It is likely that many of the materials contained here are not on the Github repository.  Note: this folder contains two subfolders that are git submodules on their own:
+
+  - **/Lester_model_background/lake_trout_data** was an exploration of the lake trout database available at the time, and
+
+  - **/Lester_model_background/Lake_trout_Lester** was a numerical and conceptual exploration of the Lester model.
 
 ### **/Analysis_2024** contains materials relevant to the 2024 analysis
 
