@@ -43,7 +43,7 @@ season_weights <- c(0.5, 0.5)   # summer, then winter
 season_Wbar <- tapply(legal_nobait$kg, legal_nobait$Season, mean)
 season_n <- tapply(legal_nobait$kg, legal_nobait$Season, length)
 season_varWbar <- tapply(legal_nobait$kg, legal_nobait$Season, var)/season_n
-season_seWbar <- sqrt(season_var)
+season_seWbar <- sqrt(season_varWbar)
 
 # combined
 Wbar <- sum(season_weights*season_Wbar)/sum(season_weights)
@@ -68,7 +68,7 @@ for(i in seq_along(possible_wts)) {
   season_Wbar <- tapply(legal_nobait$kg, legal_nobait$Season, mean)
   season_n <- tapply(legal_nobait$kg, legal_nobait$Season, length)
   season_varWbar <- tapply(legal_nobait$kg, legal_nobait$Season, var)/season_n
-  season_seWbar <- sqrt(season_var)
+  season_seWbar <- sqrt(season_varWbar)
 
   # combined
   Wbar <- sum(season_weights*season_Wbar)/sum(season_weights)
@@ -95,3 +95,28 @@ legend("topleft", lty=1:2, legend=c("Estimate", "95% CI"))
 axis(side=1, at=seq(0, 1, by=0.2),
      labels = paste0(seq(0, 100, 20), "% / ",
                     seq(100, 0, -20), "%"))
+
+
+## seeing what happens when we resample the weights and draw season weightings from a Beta(5,5)
+curve(dbeta(x, 5, 5))
+
+## the sampling variances of the weight samples are incorporated using bootstrapping!
+nsim <- 10000
+YP_sim <- rep(NA, nsim)
+for(i in 1:nsim) {
+  winter_boot <- sample(legal_nobait$kg[legal_nobait$Season == "Winter"], replace=TRUE)
+  summer_boot <- sample(legal_nobait$kg[legal_nobait$Season == "Summer"], replace=TRUE)
+
+  # weight_winter <- 0.5
+  weight_winter <- rbeta(1, 5, 5)
+  weight_summer <- 1 - weight_winter
+
+  Wbar <- (weight_winter * mean(winter_boot)) + (weight_summer * mean(summer_boot))
+  YP_sim[i] <- YP_kg/Wbar
+}
+hist(YP_sim)
+mean(YP_sim)
+median(YP_sim)
+sd(YP_sim)
+
+quantile(YP_sim, c(0.025, 0.975))

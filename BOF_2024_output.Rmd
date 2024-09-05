@@ -81,6 +81,10 @@ seWbar <- sqrt(varWbar)
 
 For this purpose, the weights of `r season_n[2]` fish in the March sample were used, as well as `r season_n[1]` fish from the June sample that were not caught using bait.  The purpose of this was to provide representative samples of harvest that could occur during the Winter and Summer sport fishing seasons, under current regulations.
 
+\pagebreak
+
+### Results
+
 Mean weights by sample are summarized below.
 
 ```{r, results='asis'}
@@ -101,13 +105,13 @@ in which $\hat{YP}$ represents the estimated yield potential in kg biomass per y
 
 The unbiased yield potential (delta method; Seber 1982), in terms of number of lake trout, was estimated as:
 
-$$\hat{YP}_n=\frac{\hat{YP}}{\hat{W}} + \frac{\hat{YP}}{\hat{W}^3}\hat{V}(\bar{W})$$
+$$\hat{YP}_n=\frac{\hat{YP}}{\bar{W}} + \frac{\hat{YP}}{\bar{W}^3}\hat{V}(\bar{W})$$
 
 in which $\bar{W}$ represents the estimated mean weight of lake trout, using data from both the March and June sampling events.
 
 The approximate variance was estimated as the following, treating estimated yield potential as constant:
 
-$$\hat{V}_{naive}(\hat{YP}_n) = \frac{\hat{YP}^2}{\hat{W}^4}\hat{V}(\bar{W})$$
+$$\hat{V}_{naive}(\hat{YP}_n) = \frac{\hat{YP}^2}{\bar{W}^4}\hat{V}(\bar{W})$$
 
 ```{r}
 # LAM assuming YP is known without error
@@ -117,7 +121,13 @@ se_YP_n <- sqrt(var_YP_n)
 ci_YP_n <- YP_n + c(-1,1)*1.96*se_YP_n
 ```
 
-Using this methodology and weighting the winter and summer samples equally, the yield potential in numbers of fish was estimated as `r round(YP_n, 2)` fish (SE `r round(se_YP_n, 2)`) fish, with an approximate 95% Wald confidence interval of (`r round(ci_YP_n[1], 2)`, `r round(ci_YP_n[2], 2)`).
+\pagebreak
+
+### Results - seasons equally weighted
+
+Using this methodology and weighting the winter and summer samples equally, the yield potential in numbers of fish was estimated as `r round(YP_n, 2)` fish (SE `r round(se_YP_n, 2)`) fish, with an approximate 95% Wald confidence interval of (`r round(ci_YP_n[1], 2)` - `r round(ci_YP_n[2], 2)`).
+
+### Sensitivity to choice of weighting
 
 To illustrate how inferences might differ under different seasonal weighting schemes, results were calculated for a sequence of weightings ranging from 100% Winter (0% Summer) to 0% Winter (100% Summer).  Results are displayed below.
 
@@ -161,3 +171,43 @@ axis(side=1, at=seq(0, 1, by=0.2),
      labels = paste0(seq(0, 100, 20), "% / ",
                     seq(100, 0, -20), "%"))
 ```
+
+### Incorporating uncertainty in true proportions of harvest by season
+
+An alternate analysis was performed, with the intent of incorporating the uncertainty in the true proportions of harvest by season.  For 100,000 iterations of Monte Carlo simulation, seasonal weightings were drawn from a Beta(5,5) distribution (plotted below), in order to approximate our state of knowledge of the true proportions by season.  Use of a Beta(5,5) distribution can be interpreted as `r 100*round((pbeta(0.6, 5, 5) - pbeta(0.4, 5, 5)), 2)`% certainty that the proportion of total harvest occurring in Winter is between 40% and 60%, and `r 100*round((pbeta(0.75, 5, 5) - pbeta(0.25, 5, 5)), 2)`% certainty that it is between 25% and 75%.
+
+```{r, fig.height=4, fig.width=7}
+curve(dbeta(x, 5, 5))
+```
+
+For each iteration, the weight samples for each season were resampled with replacement in order to incorporate sampling variance, then calculations were performed for mean weights for each season and then overall mean weight, using the randomly-drawn seasonal weightings.  Finally, the estimated Yield Potential in numbers of fish was calculated for each iteration, thus approximating the sampling distribution of $\hat{YP}_n$, incorporating the uncertainty in true proportions of harvest by season.
+
+```{r, fig.height=3.5, fig.width=7}
+## the sampling variances of the weight samples are incorporated using bootstrapping!
+nsim <- 100000
+YP_sim <- rep(NA, nsim)
+for(i in 1:nsim) {
+  winter_boot <- sample(legal_nobait$kg[legal_nobait$Season == "Winter"], replace=TRUE)
+  summer_boot <- sample(legal_nobait$kg[legal_nobait$Season == "Summer"], replace=TRUE)
+
+  # weight_winter <- 0.5
+  weight_winter <- rbeta(1, 5, 5)
+  weight_summer <- 1 - weight_winter
+
+  Wbar <- (weight_winter * mean(winter_boot)) + (weight_summer * mean(summer_boot))
+  YP_sim[i] <- YP_kg/Wbar
+}
+```
+
+The distribution of simulated $\hat{YP}_n$ is shown below.
+
+```{r, fig.height=3.5, fig.width=7}
+hist(YP_sim)
+# mean(YP_sim)
+# median(YP_sim)
+# sd(YP_sim)
+# 
+# quantile(YP_sim, c(0.025, 0.975))
+```
+
+Incorporating the uncertainty in true proportions of harvest by season using a Beta(5,5) distribution and resampling the fish weights in each season yields a bootstrap mean of `r round(mean(YP_sim), 2)` fish (SE `r round(sd(YP_sim), 2)` fish) and an approximate 95% confidence interval of (`r round(quantile(YP_sim, 0.025), 2)` - `r round(quantile(YP_sim, 0.975), 2)`).
