@@ -1,0 +1,163 @@
+---
+title: "Crosswind LAM Results"
+author: "Matt Tyers"
+date: "2024-09-05"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, dpi=300, fig.height = 7, fig.width = 10, message=FALSE, warning=FALSE)
+```
+
+## Estimating Mean Weight
+
+Since fish sampling occurred during two events within different seasons and mimicking sport fishing under different regulations, size selectivity was observed to differ substantially between sampling events.  Because of this, a temporally stratified estimator was used to estimate mean weight for lake trout in Crosswind lake, given below, in which $b_{March}$ and $b_{June}$ represent the weights given to the March and June sampling events.  These were treated as equal in the analysis below.  The stratified estimators can be expressed as the following, for observations $i \in 1 ... n_k$ within season k:
+
+$$\bar{W} = \frac{(b_{March} \times \bar{W}_{March}) + (b_{June} \times \bar{W}_{June})}{b_{March} + b_{June}}$$
+
+and
+
+$$\hat{V}(\bar{W}) = \frac{\left(b_{March}^2 \times \hat{V}(\bar{W}_{March})\right) + \left(b_{June}^2 \times \hat{V}(\bar{W}_{June})\right)}{(b_{March} + b_{June})^2}$$
+
+in which
+
+$$\bar{W}_k = \frac{\sum_{i=1}^{n_k}W_{k[i]}}{n_k}$$
+
+and
+
+$$\hat{V}(\bar{W}_k) = \frac{\sum_{i=1}^{n_k}(W_{k[i]}-\bar{W}_k)^2}{n_k(n_k-1)}$$
+
+```{r}
+library(tidyverse)
+
+## per Corey email 9/4/2024
+legal_nobait <- read_csv("BOF_2024/flat_data/legal_nobait.csv")
+
+# ## the data I was sent before
+# march_data <- read_csv("Analysis_2024/flat_data/March_Catch_Data.csv")[,-(14:21)]
+# june_data <- read_csv("Analysis_2024/flat_data/June_Catch_Data.csv")
+# 
+# all_data <- data.frame(event = c(rep("March", nrow(march_data)),
+#                                  rep("June", nrow(june_data))),
+#                        FL = c(march_data$FL, june_data$FL),
+#                        TL = c(march_data$FL, june_data$TL),
+#                        weight_kg = c(march_data$kg, june_data$Kg),
+#                        bait = c(march_data$Bait, june_data$Bait),
+#                        gear = c(march_data$Gear, rep(NA, nrow(june_data))),
+#                        technique = c(march_data$Technique, rep(NA, nrow(june_data))))
+# 
+# ## reconstructing legal_nobait from previous data - does it match?
+# legal_nobait1 <- filter(all_data, (event == "March") | (event == "June" & bait == "N"))
+# 
+# (sort(legal_nobait$kg) == sort(legal_nobait1$weight_kg)) # %>% all
+# ## it does match!
+
+
+
+########### LAM inputs
+
+area <- 3717
+log10_area <- log10(area)
+log10_YP <- 0.72*log10_area + 0.6
+YP_kg <- 10^log10_YP
+
+
+
+
+########### estimating mean weight of harvest
+season_weights <- c(0.5, 0.5)   # summer, then winter
+
+# by season
+season_Wbar <- tapply(legal_nobait$kg, legal_nobait$Season, mean)
+season_n <- tapply(legal_nobait$kg, legal_nobait$Season, length)
+season_varWbar <- tapply(legal_nobait$kg, legal_nobait$Season, var)/season_n
+season_seWbar <- sqrt(season_varWbar)
+
+# combined
+Wbar <- sum(season_weights*season_Wbar)/sum(season_weights)
+varWbar <- sum((season_weights^2)*season_varWbar)/(sum(season_weights)^2)
+seWbar <- sqrt(varWbar)
+```
+
+For this purpose, the weights of `r season_n[2]` fish in the March sample were used, as well as `r season_n[1]` fish from the June sample that were not caught using bait.  The purpose of this was to provide representative samples of harvest that could occur during the Winter and Summer sport fishing seasons, under current regulations.
+
+Mean weights by sample are summarized below.
+
+```{r, results='asis'}
+tab1 <- cbind(season_n, season_Wbar, season_seWbar)
+colnames(tab1) <- c("n","Wbar_kg","SE(Wbar_kg)")
+knitr::kable(tab1[2:1,], digits=3)
+```
+
+The mean weight of lake trout harvested from Crosswind lake was estimated as `r round(Wbar, 3)` kg (SE `r round(seWbar, 3)` kg) using stratification.
+
+## LA Model
+
+The LA model (Evans et al. 1991) was used to estimate yield potential of lake trout in Crosswind Lake as:
+
+$$log_{10}(\hat{YP}) = 0.60 + 0.72log_{10}(A)$$
+
+in which $\hat{YP}$ represents the estimated yield potential in kg biomass per year, and $A$ represents the lake area in hectares.
+
+The unbiased yield potential (delta method; Seber 1982), in terms of number of lake trout, was estimated as:
+
+$$\hat{YP}_n=\frac{\hat{YP}}{\hat{W}} + \frac{\hat{YP}}{\hat{W}^3}\hat{V}(\bar{W})$$
+
+in which $\bar{W}$ represents the estimated mean weight of lake trout, using data from both the March and June sampling events.
+
+The approximate variance was estimated as the following, treating estimated yield potential as constant:
+
+$$\hat{V}_{naive}(\hat{YP}_n) = \frac{\hat{YP}^2}{\hat{W}^4}\hat{V}(\bar{W})$$
+
+```{r}
+# LAM assuming YP is known without error
+YP_n <- YP_kg/Wbar + YP_kg/(Wbar^3)*varWbar
+var_YP_n <- (YP_kg^2)/(Wbar^4)*varWbar
+se_YP_n <- sqrt(var_YP_n)
+ci_YP_n <- YP_n + c(-1,1)*1.96*se_YP_n
+```
+
+Using this methodology and weighting the winter and summer samples equally, the yield potential in numbers of fish was estimated as `r round(YP_n, 2)` fish (SE `r round(se_YP_n, 2)`) fish, with an approximate 95% Wald confidence interval of (`r round(ci_YP_n[1], 2)`, `r round(ci_YP_n[2], 2)`).
+
+To illustrate how inferences might differ under different seasonal weighting schemes, results were calculated for a sequence of weightings ranging from 100% Winter (0% Summer) to 0% Winter (100% Summer).  Results are displayed below.
+
+```{r}
+## investigating the effect of different weightings
+possible_wts <- seq(.01, .99, by=.01)
+ci_YP_n_all <- matrix(nrow=length(possible_wts), ncol=2)
+YP_n_all <- rep(NA, length(possible_wts))
+for(i in seq_along(possible_wts)) {
+  season_weights <- c(possible_wts[i], 1-possible_wts[i])   # summer, then winter
+
+  # by season
+  season_Wbar <- tapply(legal_nobait$kg, legal_nobait$Season, mean)
+  season_n <- tapply(legal_nobait$kg, legal_nobait$Season, length)
+  season_varWbar <- tapply(legal_nobait$kg, legal_nobait$Season, var)/season_n
+  season_seWbar <- sqrt(season_varWbar)
+
+  # combined
+  Wbar <- sum(season_weights*season_Wbar)/sum(season_weights)
+  varWbar <- sum((season_weights^2)*season_varWbar)/(sum(season_weights)^2)
+  seWbar <- sqrt(varWbar)
+
+  # LAM assuming YP is known without error
+  YP_n <- YP_kg/Wbar + YP_kg/(Wbar^3)*varWbar
+  var_YP_n <- (YP_kg^2)/(Wbar^4)*varWbar
+  se_YP_n <- sqrt(var_YP_n)
+  ci_YP_n <- YP_n + c(-1,1)*1.96*se_YP_n
+
+  YP_n_all[i] <- YP_n
+  ci_YP_n_all[i,] <- ci_YP_n
+}
+plot(NA, xlim=0:1, ylim=range(ci_YP_n_all),
+     ylab="YP_n", xlab="Seasonal Weights",
+     xaxt="n")
+lines(possible_wts, YP_n_all)
+lines(possible_wts, ci_YP_n_all[,1], lty=2)
+lines(possible_wts, ci_YP_n_all[,2], lty=2)
+legend("topleft", lty=1:2, legend=c("Estimate", "95% CI"))
+
+axis(side=1, at=seq(0, 1, by=0.2),
+     labels = paste0(seq(0, 100, 20), "% / ",
+                    seq(100, 0, -20), "%"))
+```
