@@ -27,3 +27,11 @@ This study will use 2 different models to estimate sustainable yield of lake tro
 -   **/flat_data** contains data reformatted as .csv files
 
 -   **/raw_data** contains original .xlsx files, which might not be here on the Github repository
+
+### **/BOF_2024** contains materials related to a specific request for LAM results in preparation for Board of Fish.
+
+- **/flat_data** contains data reformatted as a .csv file.  This dataset was received by email from Corey Schwanke, and is the subset of fish sampling data consisting of the March sample plus the subset of the June sample caught without bait, in order to be representative of the population available to harvest under current regulations.  This was actually equivalent to an equivalent subset of the data found in /Analysis_2024/flat_data.
+
+- **/R ** contains R code
+
+### BOF_2024.Rmd is a Markdown report summarizing the work within **/BOF_2024**

@@ -120,3 +120,40 @@ median(YP_sim)
 sd(YP_sim)
 
 quantile(YP_sim, c(0.025, 0.975))
+
+
+
+
+## incorporating variance due to LAM (this will get gross)
+# note: the value of predvarsim is copied from OP_2024/R/2_RP_of_LAM.R
+
+# prediction variance of a new lake (Crosswind), on the log scale
+predvarsim <- 0.09958763
+
+## vector of simulated YP (kg) of new lake, on the log scale
+predlog10YP_kg <- rnorm(nsim, 0.6 + 0.72*log10(area), sqrt(predvarsim))
+
+## back to natural scale
+predYP_kg <- 10^predlog10YP_kg
+# hist(predYP)
+
+# the sampling variances of the weight samples are incorporated using bootstrapping!
+# nsim <- 10000
+YP_sim <- rep(NA, nsim)
+for(i in 1:nsim) {
+  winter_boot <- sample(legal_nobait$kg[legal_nobait$Season == "Winter"], replace=TRUE)
+  summer_boot <- sample(legal_nobait$kg[legal_nobait$Season == "Summer"], replace=TRUE)
+
+  weight_winter <- 0.5
+  # weight_winter <- rbeta(1, 5, 5)
+  weight_summer <- 1 - weight_winter
+
+  Wbar <- (weight_winter * mean(winter_boot)) + (weight_summer * mean(summer_boot))
+  YP_sim[i] <- predYP_kg[i]/Wbar
+}
+# hist(YP_sim)
+mean(YP_sim)
+median(YP_sim)
+sd(YP_sim)
+
+quantile(YP_sim, c(0.025, 0.975))
