@@ -1,0 +1,596 @@
+---
+title: "Crosswind LAM & Lester Results"
+output: word_document
+date: "2025-02-18"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, dpi=300, fig.height = 7, fig.width = 10, message=FALSE, warning=FALSE)
+```
+
+## Estimating Mean Weight
+
+Since fish sampling occurred during two events within different seasons and mimicking sport fishing under different regulations, size selectivity was observed to differ substantially between sampling events.  Because of this, a temporally stratified estimator was used to estimate mean weight for lake trout in Crosswind lake, given below, in which $b_{March}$ and $b_{June}$ represent the weights given to the March and June sampling events.  These were treated as equal in the analysis below.  The stratified estimators can be expressed as the following, for observations $i \in 1 ... n_k$ within season k:
+
+$$\bar{W} = \frac{(b_{March} \times \bar{W}_{March}) + (b_{June} \times \bar{W}_{June})}{b_{March} + b_{June}}$$
+
+and
+
+$$\hat{V}(\bar{W}) = \frac{\left(b_{March}^2 \times \hat{V}(\bar{W}_{March})\right) + \left(b_{June}^2 \times \hat{V}(\bar{W}_{June})\right)}{(b_{March} + b_{June})^2}$$
+
+in which
+
+$$\bar{W}_k = \frac{\sum_{i=1}^{n_k}W_{k[i]}}{n_k}$$
+
+and
+
+$$\hat{V}(\bar{W}_k) = \frac{\sum_{i=1}^{n_k}(W_{k[i]}-\bar{W}_k)^2}{n_k(n_k-1)}$$
+
+```{r}
+library(tidyverse)
+
+## per Corey email 9/4/2024
+legal_nobait <- read_csv("BOF_2024/flat_data/legal_nobait.csv")
+
+# ## the data I was sent before
+# march_data <- read_csv("Analysis_2024/flat_data/March_Catch_Data.csv")[,-(14:21)]
+# june_data <- read_csv("Analysis_2024/flat_data/June_Catch_Data.csv")
+# 
+# all_data <- data.frame(event = c(rep("March", nrow(march_data)),
+#                                  rep("June", nrow(june_data))),
+#                        FL = c(march_data$FL, june_data$FL),
+#                        TL = c(march_data$FL, june_data$TL),
+#                        weight_kg = c(march_data$kg, june_data$Kg),
+#                        bait = c(march_data$Bait, june_data$Bait),
+#                        gear = c(march_data$Gear, rep(NA, nrow(june_data))),
+#                        technique = c(march_data$Technique, rep(NA, nrow(june_data))))
+# 
+# ## reconstructing legal_nobait from previous data - does it match?
+# legal_nobait1 <- filter(all_data, (event == "March") | (event == "June" & bait == "N"))
+# 
+# (sort(legal_nobait$kg) == sort(legal_nobait1$weight_kg)) # %>% all
+# ## it does match!
+
+
+
+########### LAM inputs
+
+area <- 3674#3717
+log10_area <- log10(area)
+log10_YP <- 0.72*log10_area + 0.6
+YP_kg <- 10^log10_YP
+
+
+
+
+########### estimating mean weight of harvest
+season_weights <- c(0.5, 0.5)   # summer, then winter
+
+# by season
+season_Wbar <- tapply(legal_nobait$kg, legal_nobait$Season, mean)
+season_n <- tapply(legal_nobait$kg, legal_nobait$Season, length)
+season_varWbar <- tapply(legal_nobait$kg, legal_nobait$Season, var)/season_n
+season_seWbar <- sqrt(season_varWbar)
+
+# combined
+Wbar <- sum(season_weights*season_Wbar)/sum(season_weights)
+varWbar <- sum((season_weights^2)*season_varWbar)/(sum(season_weights)^2)
+seWbar <- sqrt(varWbar)
+```
+
+For this purpose, the weights of `r season_n[2]` fish in the March sample were used, as well as `r season_n[1]` fish from the June sample that were not caught using bait.  The purpose of this was to provide representative samples of harvest that could occur during the Winter and Summer sport fishing seasons, under current regulations.
+
+\pagebreak
+
+### Results
+
+Mean weights by sample are summarized below.
+
+```{r, results='asis'}
+tab1 <- cbind(season_n, season_Wbar, season_seWbar)
+colnames(tab1) <- c("n","Wbar_kg","SE(Wbar_kg)")
+knitr::kable(tab1[2:1,], digits=3)
+```
+
+The mean weight of lake trout harvested from Crosswind lake was estimated as `r round(Wbar, 3)` kg (SE `r round(seWbar, 3)` kg) using stratification.
+
+## LA Model
+
+The LA model (Evans et al. 1991) was used to estimate yield potential of lake trout in Crosswind Lake as:
+
+$$log_{10}(\hat{YP}) = 0.60 + 0.72log_{10}(A)$$
+
+in which $\hat{YP}$ represents the estimated yield potential in kg biomass per year, and $A$ represents the lake area in hectares.
+
+The unbiased yield potential (delta method; Seber 1982), in terms of number of lake trout, was estimated as:
+
+$$\hat{YP}_n=\frac{\hat{YP}}{\bar{W}} + \frac{\hat{YP}}{\bar{W}^3}\hat{V}(\bar{W})$$
+
+in which $\bar{W}$ represents the estimated mean weight of lake trout, using data from both the March and June sampling events.
+
+The approximate variance was estimated as the following, treating estimated yield potential as constant:
+
+$$\hat{V}_{naive}(\hat{YP}_n) = \frac{\hat{YP}^2}{\bar{W}^4}\hat{V}(\bar{W})$$
+
+```{r}
+# LAM assuming YP is known without error
+YP_n <- YP_kg/Wbar + YP_kg/(Wbar^3)*varWbar
+var_YP_n <- (YP_kg^2)/(Wbar^4)*varWbar
+se_YP_n <- sqrt(var_YP_n)
+ci_YP_n <- YP_n + c(-1,1)*1.96*se_YP_n
+```
+
+\pagebreak
+
+### Results - seasons equally weighted
+
+Using this methodology and weighting the winter and summer samples equally, the yield potential in numbers of fish was estimated as `r round(YP_n, 2)` fish (SE `r round(se_YP_n, 2)`) fish, with an approximate 95% Wald confidence interval of (`r round(ci_YP_n[1], 2)` - `r round(ci_YP_n[2], 2)`).
+
+### Sensitivity to choice of weighting
+
+To illustrate how inferences might differ under different seasonal weighting schemes, results were calculated for a sequence of weightings ranging from 100% Winter (0% Summer) to 0% Winter (100% Summer).  Results are displayed below.
+
+```{r}
+## investigating the effect of different weightings
+possible_wts <- seq(.01, .99, by=.01)
+ci_YP_n_all <- matrix(nrow=length(possible_wts), ncol=2)
+YP_n_all <- rep(NA, length(possible_wts))
+for(i in seq_along(possible_wts)) {
+  season_weights <- c(possible_wts[i], 1-possible_wts[i])   # summer, then winter
+
+  # by season
+  season_Wbar <- tapply(legal_nobait$kg, legal_nobait$Season, mean)
+  season_n <- tapply(legal_nobait$kg, legal_nobait$Season, length)
+  season_varWbar <- tapply(legal_nobait$kg, legal_nobait$Season, var)/season_n
+  season_seWbar <- sqrt(season_varWbar)
+
+  # combined
+  Wbar <- sum(season_weights*season_Wbar)/sum(season_weights)
+  varWbar <- sum((season_weights^2)*season_varWbar)/(sum(season_weights)^2)
+  seWbar <- sqrt(varWbar)
+
+  # LAM assuming YP is known without error
+  YP_n <- YP_kg/Wbar + YP_kg/(Wbar^3)*varWbar
+  var_YP_n <- (YP_kg^2)/(Wbar^4)*varWbar
+  se_YP_n <- sqrt(var_YP_n)
+  ci_YP_n <- YP_n + c(-1,1)*1.96*se_YP_n
+
+  YP_n_all[i] <- YP_n
+  ci_YP_n_all[i,] <- ci_YP_n
+}
+plot(NA, xlim=0:1, ylim=range(ci_YP_n_all),
+     ylab="YP_n", xlab="Seasonal Weights",
+     xaxt="n")
+lines(possible_wts, YP_n_all)
+lines(possible_wts, ci_YP_n_all[,1], lty=2)
+lines(possible_wts, ci_YP_n_all[,2], lty=2)
+legend("topleft", lty=1:2, legend=c("Estimate", "95% CI"))
+
+axis(side=1, at=seq(0, 1, by=0.2),
+     labels = paste0(seq(0, 100, 20), "% / ",
+                    seq(100, 0, -20), "%"))
+```
+
+### Incorporating uncertainty in true proportions of harvest by season - THIS SECTION IS PROBABLY NO LONGER NEEDED AND THIS IS FINE
+
+An alternate analysis was performed, with the intent of incorporating the uncertainty in the true proportions of harvest by season.  For 100,000 iterations of Monte Carlo simulation, seasonal weightings were drawn from a Beta(5,5) distribution (plotted below), in order to approximate our state of knowledge of the true proportions by season.  Use of a Beta(5,5) distribution can be interpreted as `r 100*round((pbeta(0.6, 5, 5) - pbeta(0.4, 5, 5)), 2)`% certainty that the proportion of total harvest occurring in Winter is between 40% and 60%, and `r 100*round((pbeta(0.75, 5, 5) - pbeta(0.25, 5, 5)), 2)`% certainty that it is between 25% and 75%.
+
+```{r, fig.height=4, fig.width=7}
+curve(dbeta(x, 5, 5))
+```
+
+For each iteration, the weight samples for each season were resampled with replacement in order to incorporate sampling variance, then calculations were performed for mean weights for each season and then overall mean weight, using the randomly-drawn seasonal weightings.  Finally, the estimated Yield Potential in numbers of fish was calculated for each iteration, thus approximating the sampling distribution of $\hat{YP}_n$, incorporating the uncertainty in true proportions of harvest by season.
+
+```{r, fig.height=3.5, fig.width=7}
+## the sampling variances of the weight samples are incorporated using bootstrapping!
+nsim <- 100000
+YP_sim <- rep(NA, nsim)
+for(i in 1:nsim) {
+  winter_boot <- sample(legal_nobait$kg[legal_nobait$Season == "Winter"], replace=TRUE)
+  summer_boot <- sample(legal_nobait$kg[legal_nobait$Season == "Summer"], replace=TRUE)
+
+  # weight_winter <- 0.5
+  weight_winter <- rbeta(1, 5, 5)
+  weight_summer <- 1 - weight_winter
+
+  Wbar <- (weight_winter * mean(winter_boot)) + (weight_summer * mean(summer_boot))
+  YP_sim[i] <- YP_kg/Wbar
+}
+```
+
+The distribution of simulated $\hat{YP}_n$ is shown below.
+
+```{r, fig.height=3.5, fig.width=7}
+hist(YP_sim)
+# mean(YP_sim)
+# median(YP_sim)
+# sd(YP_sim)
+# 
+# quantile(YP_sim, c(0.025, 0.975))
+```
+
+Incorporating the uncertainty in true proportions of harvest by season using a Beta(5,5) distribution and resampling the fish weights in each season yields a bootstrap mean of `r round(mean(YP_sim), 2)` fish (SE `r round(sd(YP_sim), 2)` fish) and an approximate 95% confidence interval of (`r round(quantile(YP_sim, 0.025), 2)` - `r round(quantile(YP_sim, 0.975), 2)`).
+
+### Incorporating uncertainty due to estimation in the Lake Area Model
+
+It is important to recognize the variance due to prediction from the LAM.  The LA model reported by Evans et al. (1991) is expressed as a linear regression on the log-log scale, with an $R^2$ of 0.69 and n=43.  Sampling from the lake area data reported by Evans et al. and simulating YP values such that the estimated regression parameters are equivalent to those reported provides an approximate estimate of the model residual variance and thereby prediction variance for a new lake with the same area as Crosswind Lake.  
+
+The previous analysis was repeated, using values of $\hat{YP}$ simulated using the prediction variance estimated for Crosswind Lake, and back-transformed to the natural scale.  To isolate the effect of uncertainty due to estimation of the LAM, seasonal weightings were set to constant and equal to one another.
+
+```{r}
+# prediction variance of a new lake (Crosswind), on the log scale
+predvarsim <- 0.09958763
+
+## vector of simulated YP (kg) of new lake, on the log scale
+predlog10YP_kg <- rnorm(nsim, 0.6 + 0.72*log10(area), sqrt(predvarsim))
+
+## back to natural scale
+predYP_kg <- 10^predlog10YP_kg
+# hist(predYP)
+
+# the sampling variances of the weight samples are incorporated using bootstrapping!
+# nsim <- 10000
+YP_sim <- rep(NA, nsim)
+for(i in 1:nsim) {
+  winter_boot <- sample(legal_nobait$kg[legal_nobait$Season == "Winter"], replace=TRUE)
+  summer_boot <- sample(legal_nobait$kg[legal_nobait$Season == "Summer"], replace=TRUE)
+
+  weight_winter <- 0.5
+  # weight_winter <- rbeta(1, 5, 5)
+  weight_summer <- 1 - weight_winter
+
+  Wbar <- (weight_winter * mean(winter_boot)) + (weight_summer * mean(summer_boot))
+  YP_sim[i] <- predYP_kg[i]/Wbar
+}
+# hist(YP_sim)
+# mean(YP_sim)
+# median(YP_sim)
+# sd(YP_sim)
+# 
+# quantile(YP_sim, c(0.025, 0.975))
+```
+
+
+Incorporating the uncertainty due to estimation of the LAM and resampling the fish weights in each season yields a bootstrap mean and median of `r round(mean(YP_sim), 2)` and `r round(median(YP_sim), 2)` fish, respectively (SE `r round(sd(YP_sim), 2)` fish) and an approximate 95% confidence interval of (`r round(quantile(YP_sim, 0.025), 2)` - `r round(quantile(YP_sim, 0.975), 2)`).
+
+```{r}
+# prediction variance of a new lake (Crosswind), on the log scale
+predvarsim <- 0.09958763
+
+## vector of simulated YP (kg) of new lake, on the log scale
+predlog10YP_kg <- rnorm(nsim, 0.6 + 0.72*log10(area), sqrt(predvarsim))
+
+## back to natural scale
+predYP_kg <- 10^predlog10YP_kg
+# hist(predYP)
+
+# the sampling variances of the weight samples are incorporated using bootstrapping!
+# nsim <- 10000
+YP_sim <- rep(NA, nsim)
+for(i in 1:nsim) {
+  winter_boot <- sample(legal_nobait$kg[legal_nobait$Season == "Winter"], replace=TRUE)
+  summer_boot <- sample(legal_nobait$kg[legal_nobait$Season == "Summer"], replace=TRUE)
+
+  # weight_winter <- 0.5
+  weight_winter <- rbeta(1, 5, 5)
+  weight_summer <- 1 - weight_winter
+
+  Wbar <- (weight_winter * mean(winter_boot)) + (weight_summer * mean(summer_boot))
+  YP_sim[i] <- predYP_kg[i]/Wbar
+}
+# hist(YP_sim)
+# mean(YP_sim)
+# median(YP_sim)
+# sd(YP_sim)
+# 
+# quantile(YP_sim, c(0.025, 0.975))
+```
+
+#### THIS IS PROBABLY NOT NEEDED
+
+Incorporating the uncertainty in seasonal weighting using the Beta(5,5) distribution presented above adds a negligible amount of variance when considering uncertainty due to estimation of the LAM.  Combining both sources of uncertainty and resampling the fish weights in each season yields a bootstrap mean and median of `r round(mean(YP_sim), 2)` and `r round(median(YP_sim), 2)` fish, respectively (SE `r round(sd(YP_sim), 2)` fish) and an approximate 95% confidence interval of (`r round(quantile(YP_sim, 0.025), 2)` - `r round(quantile(YP_sim, 0.975), 2)`).
+
+\pagebreak
+
+## Lester Model
+
+The Lester model (Lester et al. 2021) was used to estimate MSY (in kg biomass) using a stepwise approach. First the depth ratio (DR) of Crosswind Lake was calculated using:
+
+$DR = \frac{D_{max}}{D_{mn}}$
+
+where
+
+$D_{max}$ = Maximum depth from bathymetric mapping (m)
+
+$D_{mn}$ = Mean depth from bathymetric mapping (m)
+
+Thermocline depth ($D_{th}$) was estimated using:
+
+$D_{th} = 3.26 \times A^{0.109} \times D_{mn}^{0.213} \times e^{-0.0263T}$
+
+where
+
+*A* = surface area of Crosswind Lake (ha)
+
+*T* = mean annual air temperature near Crosswind Lake ($^\circ$C)
+
+The proportion of the lake volume in the hypolimnetic zone ($pV_{hy}$) was estimated using:
+
+$pV_{hy} = \left(1-\frac{D_{th}}{D_{max}}\right)^{DR}$
+
+The volume of the epibenthic zone  ($pV_{eb}$) was estimated using:
+
+$pV_{eb} = e^{-4.63pV_{hy}}$
+
+Habitat suitability (*S*) was summarized using:
+
+$S = \frac{1}{1+e^{2.47+0.386T-16.8pV_{hy}}}$
+
+Asymptotic length ($L_{\infty}$) and weight ($W_{\infty}$) of lake trout in Crosswind Lake was estimated 2 ways: using the Lester model (equations 13 and 14 below) and by using data collected from catch sampling.
+
+Asymptotic length ($L_{\infty}$) was estimated within the Lester model using:
+
+$L_{\infty} = 957 \times \left(1-e^{-0.14 \times (1+log_eA)}\right)$
+
+Asymptotic weight ($W_{\infty}$) was estimated within the Lester Model by converting asymptotic length ($L_{\infty}$) to weight using:
+
+$W_{\infty} = \left(\frac{L_{\infty}}{451}\right)^{3.2}$
+
+An alternative method for estimating asymptotic weight ($W_{\infty}$) required taking the mean weight of the heaviest 10% of the fish weighed from the March and June sampling (Lester et al. 2021). This lake specific result was compared to, and possibly substituted for the results of equation 14.  Additionally, asymptotic weight was estimated using an integrated Bayesian model incorporating information from several Alaska lakes with lake trout (Will write up methods & results soon!)
+
+Biomass density when a population is exploited and MSY ($B_{msy}$) was then estimated using:
+
+$B_{msy}  = \frac{8.47 \times D_{mn} \times pV_{eb}  \times S }{W_{\infty}^{1.33}}$
+
+Natural mortality rate of the population (M) was estimated using:
+
+$M= \frac{0.26e^{0.021T + 0.0004T^2}}{W_{\infty}^{0.30}}$
+
+MSY for surface area ($MSY_{ha}$) was estimated using:
+
+$MSY_{ha} = B_{msy} \times M$
+
+MSY in terms of kg biomass was estimated using
+
+$MSY = MSY_{ha} \times A$
+
+MSY was then expressed in numbers of fish ($MSY_n$) using
+
+$$MSY_n=\frac{MSY}{\bar{W}} + \frac{MSY}{\bar{W}^3}\hat{V}(\bar{W})$$
+
+$$\hat{V}_{naive}(MSY_n) = \frac{MSY^2}{\bar{W}^4}\hat{V}(\bar{W})$$
+
+where
+
+$\hat{W}$ = estimated mean weight of lake trout subject to harvest from Crosswind Lake.
+
+```{r}
+## here comes Lester stuff!
+Temp <- -3 # direct input
+A <- area  # carried from before
+D_max <- 44.2 # direct input
+D_mn <- 16.5  # direct input
+DR <- D_max/D_mn
+D_th <- 3.26*(A^0.109)*(D_mn^0.213)*exp(-0.0263*Temp)
+pV_hy <- (1-(D_th/D_max))^DR
+pV_eb <- exp(-4.63*pV_hy)
+
+# using Lester Winf
+L_inf <- 957*(1-exp(-0.14*(1+log(A))))
+W_inf_null <- (L_inf/451)^3.2
+
+S <- 1/(1+exp(2.47+(0.386*Temp)-(16.8*pV_hy)))
+B_msy <- 8.47*(D_mn*pV_eb*S)/(W_inf_null^1.33)
+M <- 0.26*(exp((0.021*Temp)+(0.0004*(Temp^2))))/(W_inf_null^0.30)
+msy_ha_null <- B_msy*M
+msy_null <- msy_ha_null*area 
+
+# using sampled Winf
+W_inf_samp <- 6.35  # direct input
+S <- 1/(1+exp(2.47+(0.386*Temp)-(16.8*pV_hy)))
+B_msy <- 8.47*(D_mn*pV_eb*S)/(W_inf_samp^1.33)
+M <- 0.26*(exp((0.021*Temp)+(0.0004*(Temp^2))))/(W_inf_samp^0.30)
+msy_ha_samp <- B_msy*M
+msy_samp <- msy_ha_samp*area   
+
+W_inf_mod <- 6.587089  # direct input
+S <- 1/(1+exp(2.47+(0.386*Temp)-(16.8*pV_hy)))
+B_msy <- 8.47*(D_mn*pV_eb*S)/(W_inf_mod^1.33)
+M <- 0.26*(exp((0.021*Temp)+(0.0004*(Temp^2))))/(W_inf_mod^0.30)
+msy_ha_mod <- B_msy*M
+msy_mod <- msy_ha_mod*area   
+```
+
+### Results
+
+Results were tabulated for three possible values of $W_{\infty}$, first as estimated within the Lester framework from lake area, then as estimated directly from the sample, then using the integrated Bayesian model.  The Bayesian model incorporates information from multiple data sources, but does not yet include the summer sample of weights from Crosswind lake.  Hopefully, this will be updated soon.
+
+There is a surprising amount of discrepancy between asymptotic weight as estimated from lake area alone and as estimated from catch sampling, with fish tending to be larger than would be estimated from lake area alone.  This highlights the degree of variability actually present within the relationship between lake area and asymptotic weight, and by logical extension, the relationship between lake area and YP (from the LAM) or MSY (from the Lester model).  Note that there is reasonable agreement between YP (estimated from lake area alone) and 50% MSY, when asymptotic weight is estimated from lake area alone.
+
+```{r}
+weighted_ests <- function(y_kg, season_weights = c(0.5, 0.5)) {
+  # by season
+  season_Wbar <- tapply(legal_nobait$kg, legal_nobait$Season, mean)
+  season_n <- tapply(legal_nobait$kg, legal_nobait$Season, length)
+  season_varWbar <- tapply(legal_nobait$kg, legal_nobait$Season, var)/season_n
+  season_seWbar <- sqrt(season_varWbar)
+
+  # combined
+  Wbar <- sum(season_weights*season_Wbar)/sum(season_weights)
+  varWbar <- sum((season_weights^2)*season_varWbar)/(sum(season_weights)^2)
+  seWbar <- sqrt(varWbar)
+  
+  # assuming YP is known without error
+  out <- list()
+  out$y_n <- y_kg/Wbar + y_kg/(Wbar^3)*varWbar
+  var_y_n <- (y_kg^2)/(Wbar^4)*varWbar
+  out$se_y_n <- sqrt(var_y_n)
+  out$ci_y_n <- out$y_n + c(-1,1)*1.96*out$se_y_n
+  
+  return(out)
+}
+ests_null <- weighted_ests(y_kg = msy_null)
+ests_samp <- weighted_ests(y_kg = msy_samp)
+ests_mod <- weighted_ests(y_kg = msy_mod)
+```
+
+Point estimates are compared below, using 50/50 seasonal weighting for illustration.
+
+```{r}
+comptable <- data.frame(Estimate=c("Lake Area", "Catch sampling", "Bayesian"),
+                        W_inf=c(W_inf_null, W_inf_samp, W_inf_mod),
+                        MSY=c(msy_null, msy_samp, msy_mod),
+                        MSY_n=c(ests_null$y_n, ests_samp$y_n, ests_mod$y_n),
+                        MSY_n_50=0.5*c(ests_null$y_n, ests_samp$y_n, ests_mod$y_n))
+knitr::kable(comptable, digits=c(0, 2, 0, 0, 0))
+```
+
+```{r}
+p_winter <- seq(from=0, to=1, by=0.1)
+tbl7_null <- tbl7_samp <- tbl7_mod <- 
+  data.frame(`SW` = paste(100*(1-p_winter), 100*p_winter, sep="/"),
+             W=NA, SE_W=NA, 
+             MSY40=NA, MSY50=NA, MSY60=NA, MSY70=NA, MSY80=NA, MSY90=NA, MSY100=NA)
+for(i in 1:length(p_winter)) {
+  season_weights <- c(1-p_winter[i], p_winter[i])
+  tbl7_null$W[i] <- tbl7_samp$W[i] <- tbl7_mod$W[i] <-
+    sum(season_weights*season_Wbar)/sum(season_weights)
+  tbl7_null$SE_W[i] <- tbl7_samp$SE_W[i] <- tbl7_mod$SE_W[i] <-
+    sqrt(sum((season_weights^2)*season_varWbar)/(sum(season_weights)^2))
+  tbl7_null$MSY100[i] <- 
+    weighted_ests(y_kg=msy_null, season_weights=season_weights)$y_n
+  tbl7_samp$MSY100[i] <- 
+    weighted_ests(y_kg=msy_samp, season_weights=season_weights)$y_n
+  tbl7_mod$MSY100[i] <- 
+    weighted_ests(y_kg=msy_mod, season_weights=season_weights)$y_n
+}
+for(j in 4:9) {
+  tbl7_null[,j] <- j/10*tbl7_null[,10]
+  tbl7_samp[,j] <- j/10*tbl7_samp[,10]
+  tbl7_mod[,j] <- j/10*tbl7_mod[,10]
+}
+```
+
+```{r}
+p_msy <- seq(from=0.4, to=1, by=0.1)
+tbl8_null <- tbl8_samp <- tbl8_mod <- 
+  data.frame(perc_MSY=100*p_msy, MSY_n=NA, SE_MSY_n=NA, Upr_95_CI=NA, Lwr_95_CI=NA)
+for(i in 1:length(p_msy)) {
+  ests_null <- weighted_ests(y_kg=msy_null*p_msy[i])
+  ests_samp <- weighted_ests(y_kg=msy_samp*p_msy[i])
+  ests_mod <- weighted_ests(y_kg=msy_mod*p_msy[i])
+  
+  tbl8_null[i, 2:5] <- unlist(ests_null)
+  tbl8_samp[i, 2:5] <- unlist(ests_samp)
+  tbl8_mod[i, 2:5] <- unlist(ests_mod)
+}
+```
+
+```{r}
+# fig 5
+p_winter <- seq(from=0, to=1, by=0.01)
+fig5_null <- fig5_samp <- fig5_mod <- matrix(nrow=length(p_winter), ncol=4)
+for(i in 1:length(p_winter)) {
+  fig5_null[i,] <- 
+    unlist(weighted_ests(y_kg=0.5*msy_null, season_weights=c(p_winter[i], 1-p_winter[i])))
+  fig5_samp[i,] <- 
+    unlist(weighted_ests(y_kg=0.5*msy_samp, season_weights=c(p_winter[i], 1-p_winter[i])))
+  fig5_mod[i,] <- 
+    unlist(weighted_ests(y_kg=0.5*msy_mod, season_weights=c(p_winter[i], 1-p_winter[i])))
+}
+
+plotfig5 <- function(x, ...) {
+  plot(x=p_winter, y=x[,1], ylim=range(x[,3:4]), type='l', xaxt="n", 
+       ylab="50% MSY (n)", xlab="Seasonal Weights", ...=...)
+  lines(x=p_winter, y=x[,3], lty=2)
+  lines(x=p_winter, y=x[,4], lty=2)
+  legend("topleft", lty=1:2, legend=c("Estimate", "95% CI"))
+  tlabs <- seq(from=0, to=1, by=0.2)
+  axis(side=1, at=tlabs, labels=paste0(100*tlabs, "% / ", 100*(1-tlabs), "%"))
+}
+```
+
+```{r}
+# fig 6
+p_MSY <- seq(from=0.4, to=1, by=0.01)
+fig6_null <- fig6_samp <- fig6_mod <- matrix(nrow=length(p_MSY), ncol=4)
+for(i in 1:length(p_MSY)) {
+  fig6_null[i,] <- 
+    unlist(weighted_ests(y_kg=p_MSY[i]*msy_null))
+  fig6_samp[i,] <- 
+    unlist(weighted_ests(y_kg=p_MSY[i]*msy_samp))
+  fig6_mod[i,] <- 
+    unlist(weighted_ests(y_kg=p_MSY[i]*msy_mod))
+}
+
+plotfig6 <- function(x, ...) {
+  plot(x=p_MSY, y=x[,1], ylim=range(x[,3:4]), type='l', #xaxt="n", 
+       ylab="Fractional MSY (n)", xlab="Proportion of MSY", ...=...)
+  lines(x=p_MSY, y=x[,3], lty=2)
+  lines(x=p_MSY, y=x[,4], lty=2)
+  legend("topleft", lty=1:2, legend=c("Estimate", "95% CI"))
+  # tlabs <- seq(from=0, to=1, by=0.2)
+  # axis(side=1, at=tlabs, labels=paste0(100*tlabs, "% / ", 100*(1-tlabs), "%"))
+}
+```
+
+\pagebreak
+
+### Results with $W_{\infty}$ calculated from lake area (Lester equations)
+
+```{r}
+dig7 <- c(0, 2, 2, rep(0, 7))
+knitr::kable(tbl7_null, digits=dig7)
+```
+
+```{r}
+knitr::kable(tbl8_null, digits=0)
+```
+
+```{r}
+plotfig5(fig5_null)
+```
+
+```{r}
+plotfig6(fig6_null)
+```
+
+\pagebreak
+
+### Results with $W_{\infty}$ estimated from catch sampling
+
+```{r}
+knitr::kable(tbl7_samp, digits=dig7)
+```
+
+```{r}
+knitr::kable(tbl8_samp, digits=0)
+```
+
+```{r}
+plotfig5(fig5_samp)
+```
+
+```{r}
+plotfig6(fig6_samp)
+```
+
+\pagebreak
+
+### Results with $W_{\infty}$ estimated using integrated Bayesian model
+
+```{r}
+knitr::kable(tbl7_mod, digits=dig7)
+```
+
+```{r}
+knitr::kable(tbl8_mod, digits=0)
+```
+
+```{r}
+plotfig5(fig5_mod)
+```
+
+```{r}
+plotfig6(fig6_mod)
+```
