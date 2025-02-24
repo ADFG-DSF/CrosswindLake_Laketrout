@@ -171,45 +171,7 @@ axis(side=1, at=seq(0, 1, by=0.2),
                     seq(100, 0, -20), "%"))
 ```
 
-### Incorporating uncertainty in true proportions of harvest by season - THIS SECTION IS PROBABLY NO LONGER NEEDED AND THIS IS FINE
 
-An alternate analysis was performed, with the intent of incorporating the uncertainty in the true proportions of harvest by season.  For 100,000 iterations of Monte Carlo simulation, seasonal weightings were drawn from a Beta(5,5) distribution (plotted below), in order to approximate our state of knowledge of the true proportions by season.  Use of a Beta(5,5) distribution can be interpreted as `r 100*round((pbeta(0.6, 5, 5) - pbeta(0.4, 5, 5)), 2)`% certainty that the proportion of total harvest occurring in Winter is between 40% and 60%, and `r 100*round((pbeta(0.75, 5, 5) - pbeta(0.25, 5, 5)), 2)`% certainty that it is between 25% and 75%.
-
-```{r, fig.height=4, fig.width=7}
-curve(dbeta(x, 5, 5))
-```
-
-For each iteration, the weight samples for each season were resampled with replacement in order to incorporate sampling variance, then calculations were performed for mean weights for each season and then overall mean weight, using the randomly-drawn seasonal weightings.  Finally, the estimated Yield Potential in numbers of fish was calculated for each iteration, thus approximating the sampling distribution of $\hat{YP}_n$, incorporating the uncertainty in true proportions of harvest by season.
-
-```{r, fig.height=3.5, fig.width=7}
-## the sampling variances of the weight samples are incorporated using bootstrapping!
-nsim <- 100000
-YP_sim <- rep(NA, nsim)
-for(i in 1:nsim) {
-  winter_boot <- sample(legal_nobait$kg[legal_nobait$Season == "Winter"], replace=TRUE)
-  summer_boot <- sample(legal_nobait$kg[legal_nobait$Season == "Summer"], replace=TRUE)
-
-  # weight_winter <- 0.5
-  weight_winter <- rbeta(1, 5, 5)
-  weight_summer <- 1 - weight_winter
-
-  Wbar <- (weight_winter * mean(winter_boot)) + (weight_summer * mean(summer_boot))
-  YP_sim[i] <- YP_kg/Wbar
-}
-```
-
-The distribution of simulated $\hat{YP}_n$ is shown below.
-
-```{r, fig.height=3.5, fig.width=7}
-hist(YP_sim)
-# mean(YP_sim)
-# median(YP_sim)
-# sd(YP_sim)
-# 
-# quantile(YP_sim, c(0.025, 0.975))
-```
-
-Incorporating the uncertainty in true proportions of harvest by season using a Beta(5,5) distribution and resampling the fish weights in each season yields a bootstrap mean of `r round(mean(YP_sim), 2)` fish (SE `r round(sd(YP_sim), 2)` fish) and an approximate 95% confidence interval of (`r round(quantile(YP_sim, 0.025), 2)` - `r round(quantile(YP_sim, 0.975), 2)`).
 
 ### Incorporating uncertainty due to estimation in the Lake Area Model
 
@@ -221,6 +183,8 @@ The previous analysis was repeated, using values of $\hat{YP}$ simulated using t
 # prediction variance of a new lake (Crosswind), on the log scale
 predvarsim <- 0.09958763
 
+nsim <- 100000
+
 ## vector of simulated YP (kg) of new lake, on the log scale
 predlog10YP_kg <- rnorm(nsim, 0.6 + 0.72*log10(area), sqrt(predvarsim))
 
@@ -229,7 +193,6 @@ predYP_kg <- 10^predlog10YP_kg
 # hist(predYP)
 
 # the sampling variances of the weight samples are incorporated using bootstrapping!
-# nsim <- 10000
 YP_sim <- rep(NA, nsim)
 for(i in 1:nsim) {
   winter_boot <- sample(legal_nobait$kg[legal_nobait$Season == "Winter"], replace=TRUE)
@@ -253,42 +216,7 @@ for(i in 1:nsim) {
 
 Incorporating the uncertainty due to estimation of the LAM and resampling the fish weights in each season yields a bootstrap mean and median of `r round(mean(YP_sim), 2)` and `r round(median(YP_sim), 2)` fish, respectively (SE `r round(sd(YP_sim), 2)` fish) and an approximate 95% confidence interval of (`r round(quantile(YP_sim, 0.025), 2)` - `r round(quantile(YP_sim, 0.975), 2)`).
 
-```{r}
-# prediction variance of a new lake (Crosswind), on the log scale
-predvarsim <- 0.09958763
 
-## vector of simulated YP (kg) of new lake, on the log scale
-predlog10YP_kg <- rnorm(nsim, 0.6 + 0.72*log10(area), sqrt(predvarsim))
-
-## back to natural scale
-predYP_kg <- 10^predlog10YP_kg
-# hist(predYP)
-
-# the sampling variances of the weight samples are incorporated using bootstrapping!
-# nsim <- 10000
-YP_sim <- rep(NA, nsim)
-for(i in 1:nsim) {
-  winter_boot <- sample(legal_nobait$kg[legal_nobait$Season == "Winter"], replace=TRUE)
-  summer_boot <- sample(legal_nobait$kg[legal_nobait$Season == "Summer"], replace=TRUE)
-
-  # weight_winter <- 0.5
-  weight_winter <- rbeta(1, 5, 5)
-  weight_summer <- 1 - weight_winter
-
-  Wbar <- (weight_winter * mean(winter_boot)) + (weight_summer * mean(summer_boot))
-  YP_sim[i] <- predYP_kg[i]/Wbar
-}
-# hist(YP_sim)
-# mean(YP_sim)
-# median(YP_sim)
-# sd(YP_sim)
-# 
-# quantile(YP_sim, c(0.025, 0.975))
-```
-
-#### THIS IS PROBABLY NOT NEEDED
-
-Incorporating the uncertainty in seasonal weighting using the Beta(5,5) distribution presented above adds a negligible amount of variance when considering uncertainty due to estimation of the LAM.  Combining both sources of uncertainty and resampling the fish weights in each season yields a bootstrap mean and median of `r round(mean(YP_sim), 2)` and `r round(median(YP_sim), 2)` fish, respectively (SE `r round(sd(YP_sim), 2)` fish) and an approximate 95% confidence interval of (`r round(quantile(YP_sim, 0.025), 2)` - `r round(quantile(YP_sim, 0.975), 2)`).
 
 \pagebreak
 
