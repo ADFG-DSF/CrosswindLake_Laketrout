@@ -124,7 +124,7 @@ ci_YP_n <- YP_n + c(-1,1)*1.96*se_YP_n
 
 ### Results - seasons equally weighted
 
-Using this methodology and weighting the winter and summer samples equally, the yield potential in numbers of fish was estimated as `r round(YP_n, 2)` fish (SE `r round(se_YP_n, 2)`) fish, with an approximate 95% Wald confidence interval of (`r round(ci_YP_n[1], 2)` - `r round(ci_YP_n[2], 2)`).
+Using this methodology and weighting the winter and summer samples equally, the yield potential in numbers of fish was estimated as `r round(YP_n, 2)` fish (SE `r round(se_YP_n, 2)`) fish, with an approximate 95% Wald confidence interval of (`r round(ci_YP_n[1], 2)` - `r round(ci_YP_n[2], 2)`), treating yield potential as known without error.
 
 ### Sensitivity to choice of weighting
 
@@ -193,18 +193,29 @@ predYP_kg <- 10^predlog10YP_kg
 # hist(predYP)
 
 # the sampling variances of the weight samples are incorporated using bootstrapping!
-YP_sim <- rep(NA, nsim)
+# YP_sim <- rep(NA, nsim)
+winter_boot_mn <- summer_boot_mn <- rep(NA, nsim)
 for(i in 1:nsim) {
-  winter_boot <- sample(legal_nobait$kg[legal_nobait$Season == "Winter"], replace=TRUE)
-  summer_boot <- sample(legal_nobait$kg[legal_nobait$Season == "Summer"], replace=TRUE)
+  # winter_boot <- sample(legal_nobait$kg[legal_nobait$Season == "Winter"], replace=TRUE)
+  # summer_boot <- sample(legal_nobait$kg[legal_nobait$Season == "Summer"], replace=TRUE)
+  winter_boot_mn <- mean(sample(legal_nobait$kg[legal_nobait$Season == "Winter"], replace=TRUE))
+  summer_boot_mn <- mean(sample(legal_nobait$kg[legal_nobait$Season == "Summer"], replace=TRUE))
 
-  weight_winter <- 0.5
-  # weight_winter <- rbeta(1, 5, 5)
-  weight_summer <- 1 - weight_winter
-
-  Wbar <- (weight_winter * mean(winter_boot)) + (weight_summer * mean(summer_boot))
-  YP_sim[i] <- predYP_kg[i]/Wbar
+  # weight_winter <- 0.5
+  # # weight_winter <- rbeta(1, 5, 5)
+  # weight_summer <- 1 - weight_winter
+  # 
+  # Wbar <- (weight_winter * mean(winter_boot)) + (weight_summer * mean(summer_boot))
+  # YP_sim[i] <- predYP_kg[i]/Wbar
 }
+
+weight_winter <- 0.5
+# weight_winter <- rbeta(1, 5, 5)
+weight_summer <- 1 - weight_winter
+
+Wbar <- (weight_winter * winter_boot_mn) + (weight_summer * summer_boot_mn)
+YP_sim <- predYP_kg/Wbar
+
 # hist(YP_sim)
 # mean(YP_sim)
 # median(YP_sim)
@@ -216,7 +227,20 @@ for(i in 1:nsim) {
 
 Incorporating the uncertainty due to estimation of the LAM and resampling the fish weights in each season yields a bootstrap mean and median of `r round(mean(YP_sim), 2)` and `r round(median(YP_sim), 2)` fish, respectively (SE `r round(sd(YP_sim), 2)` fish) and an approximate 95% confidence interval of (`r round(quantile(YP_sim, 0.025), 2)` - `r round(quantile(YP_sim, 0.975), 2)`).
 
+### Sensitivity to choice of weighting - incorporating all uncertainty
 
+```{r}
+p_summer <- seq(from=0, to=1, by=0.1)  # was 0.01 but this isn't needed
+# YP_mat <- matrix(nrow=length(YP_sim), ncol=length(p_summer))
+YP_ci_lo <- YP_ci_hi <- YP_est <- YP_se <- NA*p_summer
+for(i in seq_along(p_summer)) {
+  YP_sim_weighted <-predYP_kg/((p_summer[i] * summer_boot_mn) + ((1-p_summer[i]) * summer_boot_mn))
+  YP_ci_lo[i] <- quantile(YP_sim_weighted, 0.025)
+  YP_ci_hi[i] <- quantile(YP_sim_weighted, 0.975)
+  YP_est[i] <- quantile(YP_sim_weighted, 0.5)
+  YP_se[i] <- sd(YP_sim_weighted)
+}
+```
 
 \pagebreak
 
