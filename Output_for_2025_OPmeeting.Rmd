@@ -92,6 +92,27 @@ knitr::kable(tab1[2:1,], digits=3)
 
 The mean weight of lake trout harvested from Crosswind lake was estimated as `r round(Wbar, 3)` kg (SE `r round(seWbar, 3)` kg) using stratification.
 
+```{r}
+p_winter <- seq(from=0, to=1, by=0.1)
+est <- se <- NA*p_winter
+for(i in seq_along(p_winter)) {
+  season_weights1 <- c((1-p_winter[i]), p_winter[i])
+  est[i] <- sum(season_weights1*season_Wbar)/sum(season_weights1)
+  se[i] <- sum((season_weights1^2)*season_varWbar)/(sum(season_weights1)^2)
+}
+cilo <- est - 1.96*se
+cihi <- est + 1.96*se
+
+par(family="serif")
+plot(p_winter, est, type="l", ylim=range(cilo, cihi),
+       xlab="Seasonal Weights (Summer / Winter)", ylab="Est Mean Weight (kg)", xaxt="n")
+  lines(p_winter, cilo, lty=2)
+  lines(p_winter, cihi, lty=2)
+  tlabs <- seq(from=0, to=1, by=0.2)
+  axis(side=1, at=1-tlabs, labels=paste0(100*tlabs, "% / ", 100*(1-tlabs), "%"))
+  legend("topleft", lty=1:2, legend=c("Estimate", "95% CI"))
+```
+
 \pagebreak
 
 ## LA Model
@@ -181,7 +202,7 @@ $$\hat{V}_{naive}(\hat{YP}_n) = \frac{\hat{YP}^2}{\bar{W}^4}\hat{V}(\bar{W})$$
 
 It is important to recognize the variance due to prediction from the LAM.  The LA model reported by Evans et al. (1991) is expressed as a linear regression on the log-log scale, with an $R^2$ of 0.69 and n=43.  Sampling from the lake area data reported by Evans et al. and simulating YP values such that the estimated regression parameters are equivalent to those reported provides an approximate estimate of the model residual variance and thereby prediction variance for a new lake with the same area as Crosswind Lake.  
 
-The previous analysis was repeated, using values of $\hat{YP}$ simulated using the prediction variance estimated for Crosswind Lake, and back-transformed to the natural scale.  To isolate the effect of uncertainty due to estimation of the LAM, seasonal weightings were set to constant and equal to one another.
+The previous analysis was repeated, using values of $\hat{YP}$ simulated using the prediction variance estimated for Crosswind Lake, and back-transformed to the natural scale.  
 
 ```{r}
 # prediction variance of a new lake (Crosswind), on the log scale
@@ -228,10 +249,13 @@ YP_sim <- predYP_kg/Wbar
 # quantile(YP_sim, c(0.025, 0.975))
 ```
 
+```{r}
+# Incorporating the uncertainty due to estimation of the LAM and resampling the fish weights in each season yields a bootstrap mean and median of `r round(mean(YP_sim), 2)` and `r round(median(YP_sim), 2)` fish, respectively (SE `r round(sd(YP_sim), 2)` fish) and an approximate 95% confidence interval of (`r round(quantile(YP_sim, 0.025), 2)` - `r round(quantile(YP_sim, 0.975), 2)`).
+```
 
-Incorporating the uncertainty due to estimation of the LAM and resampling the fish weights in each season yields a bootstrap mean and median of `r round(mean(YP_sim), 2)` and `r round(median(YP_sim), 2)` fish, respectively (SE `r round(sd(YP_sim), 2)` fish) and an approximate 95% confidence interval of (`r round(quantile(YP_sim, 0.025), 2)` - `r round(quantile(YP_sim, 0.975), 2)`).
+\pagebreak
 
-### Sensitivity to choice of weighting - incorporating all uncertainty
+### LAM Results: incorporating model variance
 
 ```{r}
 weighted_ests <- function(y_kg, season_weights = c(0.5, 0.5)) {
@@ -316,11 +340,15 @@ knitr::kable(tbl6, digits=c(0,2,2,0,0,0,0))
 ```
 
 ```{r}
-knitr::kable(tbl6_naive, digits=c(0,2,2,0,1,0,0))
+plot_fig4(tbl6)
 ```
 
+\pagebreak
+
+### LAM Results: treating LAM-estimated YP as known without error
+
 ```{r}
-plot_fig4(tbl6)
+knitr::kable(tbl6_naive, digits=c(0,2,2,0,1,0,0))
 ```
 
 ```{r}
@@ -373,7 +401,7 @@ Asymptotic weight ($W_{\infty}$) was estimated within the Lester Model by conver
 
 $W_{\infty} = \left(\frac{L_{\infty}}{451}\right)^{3.2}$  **We did not do this.**
 
-An alternative method for estimating asymptotic weight ($W_{\infty}$) required taking the mean weight of the heaviest 10% of the fish weighed from the March and June sampling (Lester et al. 2021). This lake specific result was compared to, and possibly substituted for the results of equation 14.  Additionally, asymptotic weight was estimated using an integrated Bayesian model incorporating information from several Alaska lakes with lake trout (Will write up methods & results soon!)
+An alternative method for estimating asymptotic weight ($W_{\infty}$) required taking the mean weight of the heaviest 10% of the fish weighed from the March and June sampling (Lester et al. 2021). This lake specific result was compared to, and possibly substituted for the results of equation 14.  Additionally, asymptotic weight was estimated using an integrated Bayesian model incorporating information from several Alaska lakes with lake trout **(Will write up methods & results soon!)**
 
 Biomass density when a population is exploited and MSY ($B_{msy}$) was then estimated using:
 
@@ -397,13 +425,19 @@ MSY was then expressed in numbers of fish ($MSY_n$) using
 
 $$MSY_n=\frac{MSY}{\bar{W}} + \frac{MSY}{\bar{W}^3}\hat{V}(\bar{W})$$
 
-$$\hat{V}_{naive}(MSY_n) = \frac{MSY^2}{\bar{W}^4}\hat{V}(\bar{W})$$  **We did not do this.**
+$$\hat{V}_{naive}(MSY_n) = \frac{MSY^2}{\bar{W}^4}\hat{V}(\bar{W})$$  
 
 where
 
 $\hat{W}$ = estimated mean weight of lake trout subject to harvest from Crosswind Lake.
 
-**I used the Bayesian model to estimate $W_{\infty}$, using all our catch sampling plus info from other studies, including the length ~ age relationship observed for Crosswind and hierarchical info from 40 other lakes.  This gave a SE around $W_{\infty}$ rather than treating it as known.  Also - I dug into Lester and found some additional sources of variance that were approximated using Monte Carlo simulation, but I still need to write this up.**
+### Incorporating uncertainty due to estimation in the Lester Model
+
+$W_{\infty}$ was estimated using a Bayesian model incorporating all catch sampling from Crosswind Lake including some additional studies, as well as additional information from hierarchical modeling of relationships between age, length, and weight from 40 other lakes.  Estimation of $MSY_n$ within the Lester model is particularly sensitive to  $W_{\infty}$, therefore a robust estimate of asymptotic weight was critical, and any associated variance should be considered.
+
+Lester et al. report standard errors associated with two parameters, namely the exponents of $W_{\infty}$ in equations XXX and XXX.  Since uncertainty about an exponent can be expected to dominate other sources of variance within the model, accounting for this can be expected to result in a reasonable estimate of minimum variance in $MSY_n$.
+
+A minimum estimate of the variance in Lester model results for Crosswind Lake was accomplished by means of a combination of Markov Chain Monte Carlo (MCMC) sampling of $W_{\infty}$ and Monte Carlo simulation of the parameters in Equations XXX and XXX above, assuming mutually independent Normal distributions standard deviations equal to the standard errors reported by Lester et al.
 
 ```{r}
 ## here comes Lester stuff!
@@ -443,13 +477,17 @@ msy_ha_mod <- B_msy*M
 msy_mod <- msy_ha_mod*area   
 ```
 
-### Results
+```{r}
 
-Results were tabulated for three possible values of $W_{\infty}$, first as estimated within the Lester framework from lake area, then as estimated directly from the sample, then using the integrated Bayesian model.  
+# ### Results
+# 
+# Results were tabulated for three possible values of $W_{\infty}$, first as estimated within the Lester framework from lake area, then as estimated directly from the sample, then using the integrated Bayesian model.  
+# 
+# There is a surprising amount of discrepancy between asymptotic weight as estimated from lake area alone and as estimated from catch sampling, with fish tending to be larger than would be estimated from lake area alone.  This highlights the degree of variability actually present within the relationship between lake area and asymptotic weight, and by logical extension, the relationship between lake area and YP (from the LAM) or MSY (from the Lester model).  Note that there is reasonable agreement between YP (estimated from lake area alone) and 50% MSY, when asymptotic weight is estimated from lake area alone.
+# 
+# Point estimates are compared below, using 50/50 seasonal weighting for illustration.  **I'm not sure if this is correct after incorporating the Lester variance.**
 
-There is a surprising amount of discrepancy between asymptotic weight as estimated from lake area alone and as estimated from catch sampling, with fish tending to be larger than would be estimated from lake area alone.  This highlights the degree of variability actually present within the relationship between lake area and asymptotic weight, and by logical extension, the relationship between lake area and YP (from the LAM) or MSY (from the Lester model).  Note that there is reasonable agreement between YP (estimated from lake area alone) and 50% MSY, when asymptotic weight is estimated from lake area alone.
-
-Point estimates are compared below, using 50/50 seasonal weighting for illustration.  **I'm not sure if this is correct after incorporating the Lester variance.**
+```
 
 ```{r}
 # comptable <- data.frame(Estimate=c("Lake Area", "Catch sampling", "Bayesian"),
@@ -508,7 +546,7 @@ msy_mod <- msy_ha_mod*area
 tbl7 <- data.frame(`SW` = paste(100*(1-p_winter), 100*p_winter, sep="/"),
              W=tbl6$W, SE_W=tbl6$SE_W,
              MSY40=NA, MSY50=NA, MSY60=NA, MSY70=NA, MSY80=NA, MSY90=NA, MSY100=NA)
-fig5_ci <- data.frame(ci_lo=rep(NA, length(p_winter)), ci_hi=NA)
+fig5_ci <- fig5_ci_naive <- data.frame(ci_lo=rep(NA, length(p_winter)), ci_hi=NA)
 for(i in seq_along(p_winter)) {
   season_weights <- c(1-p_winter[i], p_winter[i])
   tbl7$MSY100[i] <- 
@@ -516,6 +554,8 @@ for(i in seq_along(p_winter)) {
   msy_n_vec <- 0.5*msy_mod/(p_winter[i]*winter_boot_mn + (1-p_winter[i])*summer_boot_mn)
   fig5_ci$ci_lo[i] <- quantile(msy_n_vec, 0.025)
   fig5_ci$ci_hi[i] <- quantile(msy_n_vec, 0.975)
+  fig5_ci_naive$ci_lo[i] <- weighted_ests(y_kg=0.5*median(msy_mod), season_weights=season_weights)$ci_y_n[1]
+  fig5_ci_naive$ci_hi[i] <- weighted_ests(y_kg=0.5*median(msy_mod), season_weights=season_weights)$ci_y_n[2]
 }
 for(j in 4:9) {
   tbl7[,j] <- j/10*tbl7[,10]
@@ -538,7 +578,7 @@ plot_fig5 <- function(est, ci, ...) {
 
 ```{r}
 p_msy <- seq(from=0.4, to=1, by=0.1)
-tbl8 <- data.frame(perc_MSY=100*p_msy, MSY_n=NA, SE_MSY_n=NA, Upr_95_CI=NA, Lwr_95_CI=NA)
+tbl8 <- data.frame(perc_MSY=100*p_msy, MSY_n=NA, SE_MSY_n=NA, Lwr_95_CI=NA, Upr_95_CI=NA)
 for(i in seq_along(p_msy)) {
   msy_n_vec <- p_msy[i]*msy_mod/(0.5*winter_boot_mn + 0.5*summer_boot_mn)
   tbl8$MSY_n[i] <- weighted_ests(y_kg=p_msy[i]*median(msy_mod), season_weights=rep(0.5,2))$y_n
@@ -572,24 +612,44 @@ plot_fig6 <- function(tab, ...) {
 }
 ```
 
-```{r}
-knitr::kable(tbl7, digits=c(0,2,2,rep(0,7)))
-```
+\pagebreak
+
+### Lester Results: incorporating Lester variance (within-model, and asymptotic weight)
 
 ```{r}
 plot_fig5(est=tbl7, ci=fig5_ci)
 ```
 
 ```{r}
+knitr::kable(tbl7, digits=c(0,2,2,rep(0,7)))
+```
+
+\pagebreak
+
+```{r}
 knitr::kable(tbl8, digits=0)
 ```
 
 ```{r}
-knitr::kable(tbl8_naive, digits=c(0,0,1,0,0))
+plot_fig6(tab=tbl8)
+```
+
+\pagebreak
+
+### Lester Results: treating Lester-estimated MSY as known without error
+
+```{r}
+plot_fig5(est=tbl7, ci=fig5_ci_naive)
 ```
 
 ```{r}
-plot_fig6(tab=tbl8)
+knitr::kable(tbl7, digits=c(0,2,2,rep(0,7)))
+```
+
+\pagebreak
+
+```{r}
+knitr::kable(tbl8_naive, digits=c(0,0,1,0,0))
 ```
 
 ```{r}
@@ -685,63 +745,68 @@ plot_fig6(tab=tbl8_naive)
 # }
 ```
 
-\pagebreak
-
-### Results with $W_{\infty}$ calculated from lake area (Lester equations)
 
 ```{r}
-# dig7 <- c(0, 2, 2, rep(0, 7))
-# knitr::kable(tbl7_null, digits=dig7)
-```
 
-```{r}
-# knitr::kable(tbl8_null, digits=0)
-```
+# \pagebreak
+# 
+# ### Results with $W_{\infty}$ calculated from lake area (Lester equations)
+# 
+# ```{r}
+# # dig7 <- c(0, 2, 2, rep(0, 7))
+# # knitr::kable(tbl7_null, digits=dig7)
+# ```
+# 
+# ```{r}
+# # knitr::kable(tbl8_null, digits=0)
+# ```
+# 
+# ```{r}
+# # plotfig5(fig5_null)
+# ```
+# 
+# ```{r}
+# # plotfig6(fig6_null)
+# ```
+# 
+# \pagebreak
+# 
+# ### Results with $W_{\infty}$ estimated from catch sampling
+# 
+# ```{r}
+# # knitr::kable(tbl7_samp, digits=dig7)
+# ```
+# 
+# ```{r}
+# # knitr::kable(tbl8_samp, digits=0)
+# ```
+# 
+# ```{r}
+# # plotfig5(fig5_samp)
+# ```
+# 
+# ```{r}
+# # plotfig6(fig6_samp)
+# ```
+# 
+# \pagebreak
+# 
+# ### Results with $W_{\infty}$ estimated using integrated Bayesian model
+# 
+# ```{r}
+# # knitr::kable(tbl7_mod, digits=dig7)
+# ```
+# 
+# ```{r}
+# # knitr::kable(tbl8_mod, digits=0)
+# ```
+# 
+# ```{r}
+# # plotfig5(fig5_mod)
+# ```
+# 
+# ```{r}
+# # plotfig6(fig6_mod)
+# ```
 
-```{r}
-# plotfig5(fig5_null)
-```
-
-```{r}
-# plotfig6(fig6_null)
-```
-
-\pagebreak
-
-### Results with $W_{\infty}$ estimated from catch sampling
-
-```{r}
-# knitr::kable(tbl7_samp, digits=dig7)
-```
-
-```{r}
-# knitr::kable(tbl8_samp, digits=0)
-```
-
-```{r}
-# plotfig5(fig5_samp)
-```
-
-```{r}
-# plotfig6(fig6_samp)
-```
-
-\pagebreak
-
-### Results with $W_{\infty}$ estimated using integrated Bayesian model
-
-```{r}
-# knitr::kable(tbl7_mod, digits=dig7)
-```
-
-```{r}
-# knitr::kable(tbl8_mod, digits=0)
-```
-
-```{r}
-# plotfig5(fig5_mod)
-```
-
-```{r}
-# plotfig6(fig6_mod)
 ```
