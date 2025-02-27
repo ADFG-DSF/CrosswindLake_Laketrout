@@ -1,11 +1,11 @@
 ---
 title: "Crosswind LAM & Lester Results"
 output: word_document
-date: "2025-02-18"
+date: "2025-02-26"
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = FALSE, dpi=300, fig.height = 7, fig.width = 10, message=FALSE, warning=FALSE)
+knitr::opts_chunk$set(echo = FALSE, dpi=300, fig.height = 5, fig.width = 7, message=FALSE, warning=FALSE)
 ```
 
 ## Estimating Mean Weight
@@ -80,8 +80,6 @@ seWbar <- sqrt(varWbar)
 
 For this purpose, the weights of `r season_n[2]` fish in the March sample were used, as well as `r season_n[1]` fish from the June sample that were not caught using bait.  The purpose of this was to provide representative samples of harvest that could occur during the Winter and Summer sport fishing seasons, under current regulations.
 
-\pagebreak
-
 ### Results
 
 Mean weights by sample are summarized below.
@@ -93,6 +91,8 @@ knitr::kable(tab1[2:1,], digits=3)
 ```
 
 The mean weight of lake trout harvested from Crosswind lake was estimated as `r round(Wbar, 3)` kg (SE `r round(seWbar, 3)` kg) using stratification.
+
+\pagebreak
 
 ## LA Model
 
@@ -113,65 +113,69 @@ The approximate variance was estimated as the following, treating estimated yiel
 $$\hat{V}_{naive}(\hat{YP}_n) = \frac{\hat{YP}^2}{\bar{W}^4}\hat{V}(\bar{W})$$
 
 ```{r}
-# LAM assuming YP is known without error
-YP_n <- YP_kg/Wbar + YP_kg/(Wbar^3)*varWbar
-var_YP_n <- (YP_kg^2)/(Wbar^4)*varWbar
-se_YP_n <- sqrt(var_YP_n)
-ci_YP_n <- YP_n + c(-1,1)*1.96*se_YP_n
+
+# **THIS ^^^ IS NOT WHAT HAPPENED.**  I used Monte Carlo simulation to approximate the variance inherent to YP and bootstrapped the weight samples - still need to talk about this.
+# 
+# ```{r}
+# # LAM assuming YP is known without error
+# YP_n <- YP_kg/Wbar + YP_kg/(Wbar^3)*varWbar
+# var_YP_n <- (YP_kg^2)/(Wbar^4)*varWbar
+# se_YP_n <- sqrt(var_YP_n)
+# ci_YP_n <- YP_n + c(-1,1)*1.96*se_YP_n
+# ```
+# 
+# \pagebreak
+# 
+# ### Results - seasons equally weighted
+# 
+# Using this methodology and weighting the winter and summer samples equally, the yield potential in numbers of fish was estimated as `r round(YP_n, 2)` fish (SE `r round(se_YP_n, 2)`) fish, with an approximate 95% Wald confidence interval of (`r round(ci_YP_n[1], 2)` - `r round(ci_YP_n[2], 2)`), treating yield potential as known without error.  **It's unsatisfying, but I don't think it's honest to report these SE's / CI's.  Also in the fig below.**
+# 
+# ### Sensitivity to choice of weighting
+# 
+# To illustrate how inferences might differ under different seasonal weighting schemes, results were calculated for a sequence of weightings ranging from 100% Winter (0% Summer) to 0% Winter (100% Summer).  Results are displayed below.
+# 
+# ```{r}
+# # ## investigating the effect of different weightings
+# # possible_wts <- seq(.01, .99, by=.01)
+# # ci_YP_n_all <- matrix(nrow=length(possible_wts), ncol=2)
+# # YP_n_all <- rep(NA, length(possible_wts))
+# # for(i in seq_along(possible_wts)) {
+# #   season_weights <- c(possible_wts[i], 1-possible_wts[i])   # summer, then winter
+# # 
+# #   # by season
+# #   season_Wbar <- tapply(legal_nobait$kg, legal_nobait$Season, mean)
+# #   season_n <- tapply(legal_nobait$kg, legal_nobait$Season, length)
+# #   season_varWbar <- tapply(legal_nobait$kg, legal_nobait$Season, var)/season_n
+# #   season_seWbar <- sqrt(season_varWbar)
+# # 
+# #   # combined
+# #   Wbar <- sum(season_weights*season_Wbar)/sum(season_weights)
+# #   varWbar <- sum((season_weights^2)*season_varWbar)/(sum(season_weights)^2)
+# #   seWbar <- sqrt(varWbar)
+# # 
+# #   # LAM assuming YP is known without error
+# #   YP_n <- YP_kg/Wbar + YP_kg/(Wbar^3)*varWbar
+# #   var_YP_n <- (YP_kg^2)/(Wbar^4)*varWbar
+# #   se_YP_n <- sqrt(var_YP_n)
+# #   ci_YP_n <- YP_n + c(-1,1)*1.96*se_YP_n
+# # 
+# #   YP_n_all[i] <- YP_n
+# #   ci_YP_n_all[i,] <- ci_YP_n
+# # }
+# # plot(NA, xlim=0:1, ylim=range(ci_YP_n_all),
+# #      ylab="YP_n", xlab="Seasonal Weights",
+# #      xaxt="n")
+# # lines(possible_wts, YP_n_all)
+# # lines(possible_wts, ci_YP_n_all[,1], lty=2)
+# # lines(possible_wts, ci_YP_n_all[,2], lty=2)
+# # legend("topleft", lty=1:2, legend=c("Estimate", "95% CI"))
+# # 
+# # axis(side=1, at=seq(0, 1, by=0.2),
+# #      labels = paste0(seq(0, 100, 20), "% / ",
+# #                     seq(100, 0, -20), "%"))
+# ```
+
 ```
-
-\pagebreak
-
-### Results - seasons equally weighted
-
-Using this methodology and weighting the winter and summer samples equally, the yield potential in numbers of fish was estimated as `r round(YP_n, 2)` fish (SE `r round(se_YP_n, 2)`) fish, with an approximate 95% Wald confidence interval of (`r round(ci_YP_n[1], 2)` - `r round(ci_YP_n[2], 2)`), treating yield potential as known without error.
-
-### Sensitivity to choice of weighting
-
-To illustrate how inferences might differ under different seasonal weighting schemes, results were calculated for a sequence of weightings ranging from 100% Winter (0% Summer) to 0% Winter (100% Summer).  Results are displayed below.
-
-```{r}
-## investigating the effect of different weightings
-possible_wts <- seq(.01, .99, by=.01)
-ci_YP_n_all <- matrix(nrow=length(possible_wts), ncol=2)
-YP_n_all <- rep(NA, length(possible_wts))
-for(i in seq_along(possible_wts)) {
-  season_weights <- c(possible_wts[i], 1-possible_wts[i])   # summer, then winter
-
-  # by season
-  season_Wbar <- tapply(legal_nobait$kg, legal_nobait$Season, mean)
-  season_n <- tapply(legal_nobait$kg, legal_nobait$Season, length)
-  season_varWbar <- tapply(legal_nobait$kg, legal_nobait$Season, var)/season_n
-  season_seWbar <- sqrt(season_varWbar)
-
-  # combined
-  Wbar <- sum(season_weights*season_Wbar)/sum(season_weights)
-  varWbar <- sum((season_weights^2)*season_varWbar)/(sum(season_weights)^2)
-  seWbar <- sqrt(varWbar)
-
-  # LAM assuming YP is known without error
-  YP_n <- YP_kg/Wbar + YP_kg/(Wbar^3)*varWbar
-  var_YP_n <- (YP_kg^2)/(Wbar^4)*varWbar
-  se_YP_n <- sqrt(var_YP_n)
-  ci_YP_n <- YP_n + c(-1,1)*1.96*se_YP_n
-
-  YP_n_all[i] <- YP_n
-  ci_YP_n_all[i,] <- ci_YP_n
-}
-plot(NA, xlim=0:1, ylim=range(ci_YP_n_all),
-     ylab="YP_n", xlab="Seasonal Weights",
-     xaxt="n")
-lines(possible_wts, YP_n_all)
-lines(possible_wts, ci_YP_n_all[,1], lty=2)
-lines(possible_wts, ci_YP_n_all[,2], lty=2)
-legend("topleft", lty=1:2, legend=c("Estimate", "95% CI"))
-
-axis(side=1, at=seq(0, 1, by=0.2),
-     labels = paste0(seq(0, 100, 20), "% / ",
-                    seq(100, 0, -20), "%"))
-```
-
-
 
 ### Incorporating uncertainty due to estimation in the Lake Area Model
 
@@ -198,8 +202,8 @@ winter_boot_mn <- summer_boot_mn <- rep(NA, nsim)
 for(i in 1:nsim) {
   # winter_boot <- sample(legal_nobait$kg[legal_nobait$Season == "Winter"], replace=TRUE)
   # summer_boot <- sample(legal_nobait$kg[legal_nobait$Season == "Summer"], replace=TRUE)
-  winter_boot_mn <- mean(sample(legal_nobait$kg[legal_nobait$Season == "Winter"], replace=TRUE))
-  summer_boot_mn <- mean(sample(legal_nobait$kg[legal_nobait$Season == "Summer"], replace=TRUE))
+  winter_boot_mn[i] <- mean(sample(legal_nobait$kg[legal_nobait$Season == "Winter"], replace=TRUE))
+  summer_boot_mn[i] <- mean(sample(legal_nobait$kg[legal_nobait$Season == "Summer"], replace=TRUE))
 
   # weight_winter <- 0.5
   # # weight_winter <- rbeta(1, 5, 5)
@@ -230,16 +234,97 @@ Incorporating the uncertainty due to estimation of the LAM and resampling the fi
 ### Sensitivity to choice of weighting - incorporating all uncertainty
 
 ```{r}
-p_summer <- seq(from=0, to=1, by=0.1)  # was 0.01 but this isn't needed
-# YP_mat <- matrix(nrow=length(YP_sim), ncol=length(p_summer))
-YP_ci_lo <- YP_ci_hi <- YP_est <- YP_se <- NA*p_summer
-for(i in seq_along(p_summer)) {
-  YP_sim_weighted <-predYP_kg/((p_summer[i] * summer_boot_mn) + ((1-p_summer[i]) * summer_boot_mn))
+weighted_ests <- function(y_kg, season_weights = c(0.5, 0.5)) {
+  # by season
+  season_Wbar <- tapply(legal_nobait$kg, legal_nobait$Season, mean)
+  season_n <- tapply(legal_nobait$kg, legal_nobait$Season, length)
+  season_varWbar <- tapply(legal_nobait$kg, legal_nobait$Season, var)/season_n
+  season_seWbar <- sqrt(season_varWbar)
+
+  # combined
+  Wbar <- sum(season_weights*season_Wbar)/sum(season_weights)
+  varWbar <- sum((season_weights^2)*season_varWbar)/(sum(season_weights)^2)
+  seWbar <- sqrt(varWbar)
+  
+  # assuming YP is known without error
+  out <- list()
+  out$y_n <- y_kg/Wbar + y_kg/(Wbar^3)*varWbar
+  var_y_n <- (y_kg^2)/(Wbar^4)*varWbar
+  out$se_y_n <- sqrt(var_y_n)
+  out$ci_y_n <- out$y_n + c(-1,1)*1.96*out$se_y_n
+  
+  return(out)
+}
+# ests_null <- weighted_ests(y_kg = msy_null)
+# ests_samp <- weighted_ests(y_kg = msy_samp)
+# ests_mod <- weighted_ests(y_kg = msy_mod)
+```
+
+```{r}
+p_winter <- seq(from=0, to=1, by=0.1)  # was 0.01 but this isn't needed
+# YP_mat <- matrix(nrow=length(YP_sim), ncol=length(p_winter))
+YP_ci_lo <- YP_ci_hi <- YP_est <- YP_se <- W_est <- SE_W_est  <- NA*p_winter
+for(i in seq_along(p_winter)) {
+  YP_sim_weighted <- predYP_kg/((p_winter[i] * winter_boot_mn) + ((1-p_winter[i]) * summer_boot_mn))
+  xx <- weighted_ests(y_kg=YP_kg, season_weights = c((1-p_winter[i]), p_winter[i]))
   YP_ci_lo[i] <- quantile(YP_sim_weighted, 0.025)
   YP_ci_hi[i] <- quantile(YP_sim_weighted, 0.975)
-  YP_est[i] <- quantile(YP_sim_weighted, 0.5)
+  YP_est[i] <- xx$y_n#quantile(YP_sim_weighted, 0.5)
   YP_se[i] <- sd(YP_sim_weighted)
+  W_est[i] <- (1-p_winter[i])*mean(legal_nobait$kg[legal_nobait$Season == "Summer"]) +
+    p_winter[i]*mean(legal_nobait$kg[legal_nobait$Season == "Winter"])
+  SE_W_est[i] <- sqrt(((1-p_winter[i])^2)*var(legal_nobait$kg[legal_nobait$Season == "Summer"])/sum(legal_nobait$Season == "Summer") +
+    (p_winter[i]^2)*var(legal_nobait$kg[legal_nobait$Season == "Winter"])/sum(legal_nobait$Season == "Winter"))
 }
+
+### these will become table 6 and fig 4
+tbl6 <-
+  data.frame(`SW` = paste(100*(1-p_winter), 100*p_winter, sep="/"),
+             W=W_est, SE_W=SE_W_est,
+            YPn=YP_est, SE_YPn=YP_se, 
+            lwr95_YPn=YP_ci_lo, upr95_YPn=YP_ci_hi)
+
+```
+
+```{r}
+tbl6_naive <- tbl6
+for(i in seq_along(p_winter)) {
+  xx <- weighted_ests(y_kg=YP_kg, season_weights = c((1-p_winter[i]), p_winter[i]))
+  tbl6_naive$YPn[i] <- xx$y_n
+  tbl6_naive$SE_YPn[i] <- xx$se_y_n
+  tbl6_naive$lwr95_YPn[i] <- xx$ci_y_n[1]
+  tbl6_naive$upr95_YPn[i] <- xx$ci_y_n[2]
+}
+```
+
+```{r}
+plot_fig4 <- function(tab, ...) {
+  par(family="serif")
+  p_winter <- seq(from=0, to=1, length.out=nrow(tab))
+  plot(p_winter, tab$YPn, type="l", ylim=range(0, tab$upr95_YPn),
+       xlab="Seasonal Weights (Summer / Winter)", ylab="YP (n)", xaxt="n",...=...)
+  lines(p_winter, tab$lwr95_YPn, lty=2)
+  lines(p_winter, tab$upr95_YPn, lty=2)
+  tlabs <- seq(from=0, to=1, by=0.2)
+  axis(side=1, at=1-tlabs, labels=paste0(100*tlabs, "% / ", 100*(1-tlabs), "%"))
+  legend("topright", lty=1:2, legend=c("Estimate", "95% CI"))
+}
+```
+
+```{r}
+knitr::kable(tbl6, digits=c(0,2,2,0,0,0,0))
+```
+
+```{r}
+knitr::kable(tbl6_naive, digits=c(0,2,2,0,1,0,0))
+```
+
+```{r}
+plot_fig4(tbl6)
+```
+
+```{r}
+plot_fig4(tbl6_naive)
 ```
 
 \pagebreak
@@ -282,11 +367,11 @@ Asymptotic length ($L_{\infty}$) and weight ($W_{\infty}$) of lake trout in Cros
 
 Asymptotic length ($L_{\infty}$) was estimated within the Lester model using:
 
-$L_{\infty} = 957 \times \left(1-e^{-0.14 \times (1+log_eA)}\right)$
+$L_{\infty} = 957 \times \left(1-e^{-0.14 \times (1+log_eA)}\right)$  **We did not do this.**
 
 Asymptotic weight ($W_{\infty}$) was estimated within the Lester Model by converting asymptotic length ($L_{\infty}$) to weight using:
 
-$W_{\infty} = \left(\frac{L_{\infty}}{451}\right)^{3.2}$
+$W_{\infty} = \left(\frac{L_{\infty}}{451}\right)^{3.2}$  **We did not do this.**
 
 An alternative method for estimating asymptotic weight ($W_{\infty}$) required taking the mean weight of the heaviest 10% of the fish weighed from the March and June sampling (Lester et al. 2021). This lake specific result was compared to, and possibly substituted for the results of equation 14.  Additionally, asymptotic weight was estimated using an integrated Bayesian model incorporating information from several Alaska lakes with lake trout (Will write up methods & results soon!)
 
@@ -297,6 +382,8 @@ $B_{msy}  = \frac{8.47 \times D_{mn} \times pV_{eb}  \times S }{W_{\infty}^{1.33
 Natural mortality rate of the population (M) was estimated using:
 
 $M= \frac{0.26e^{0.021T + 0.0004T^2}}{W_{\infty}^{0.30}}$
+
+**Lester estimates the 1.33 and 0.30 with se's of 0.17 and 0.04 respectively, which is kind of a big deal when propagated through.**
 
 MSY for surface area ($MSY_{ha}$) was estimated using:
 
@@ -310,11 +397,13 @@ MSY was then expressed in numbers of fish ($MSY_n$) using
 
 $$MSY_n=\frac{MSY}{\bar{W}} + \frac{MSY}{\bar{W}^3}\hat{V}(\bar{W})$$
 
-$$\hat{V}_{naive}(MSY_n) = \frac{MSY^2}{\bar{W}^4}\hat{V}(\bar{W})$$
+$$\hat{V}_{naive}(MSY_n) = \frac{MSY^2}{\bar{W}^4}\hat{V}(\bar{W})$$  **We did not do this.**
 
 where
 
 $\hat{W}$ = estimated mean weight of lake trout subject to harvest from Crosswind Lake.
+
+**I used the Bayesian model to estimate $W_{\infty}$, using all our catch sampling plus info from other studies, including the length ~ age relationship observed for Crosswind and hierarchical info from 40 other lakes.  This gave a SE around $W_{\infty}$ rather than treating it as known.  Also - I dug into Lester and found some additional sources of variance that were approximated using Monte Carlo simulation, but I still need to write this up.**
 
 ```{r}
 ## here comes Lester stuff!
@@ -345,7 +434,8 @@ M <- 0.26*(exp((0.021*Temp)+(0.0004*(Temp^2))))/(W_inf_samp^0.30)
 msy_ha_samp <- B_msy*M
 msy_samp <- msy_ha_samp*area   
 
-W_inf_mod <- 6.587089  # direct input
+load(file="W_inf_vec.Rdata")
+W_inf_mod <- median(W_inf_vec)
 S <- 1/(1+exp(2.47+(0.386*Temp)-(16.8*pV_hy)))
 B_msy <- 8.47*(D_mn*pV_eb*S)/(W_inf_mod^1.33)
 M <- 0.26*(exp((0.021*Temp)+(0.0004*(Temp^2))))/(W_inf_mod^0.30)
@@ -355,135 +445,244 @@ msy_mod <- msy_ha_mod*area
 
 ### Results
 
-Results were tabulated for three possible values of $W_{\infty}$, first as estimated within the Lester framework from lake area, then as estimated directly from the sample, then using the integrated Bayesian model.  The Bayesian model incorporates information from multiple data sources, but does not yet include the summer sample of weights from Crosswind lake.  Hopefully, this will be updated soon.
+Results were tabulated for three possible values of $W_{\infty}$, first as estimated within the Lester framework from lake area, then as estimated directly from the sample, then using the integrated Bayesian model.  
 
 There is a surprising amount of discrepancy between asymptotic weight as estimated from lake area alone and as estimated from catch sampling, with fish tending to be larger than would be estimated from lake area alone.  This highlights the degree of variability actually present within the relationship between lake area and asymptotic weight, and by logical extension, the relationship between lake area and YP (from the LAM) or MSY (from the Lester model).  Note that there is reasonable agreement between YP (estimated from lake area alone) and 50% MSY, when asymptotic weight is estimated from lake area alone.
 
-```{r}
-weighted_ests <- function(y_kg, season_weights = c(0.5, 0.5)) {
-  # by season
-  season_Wbar <- tapply(legal_nobait$kg, legal_nobait$Season, mean)
-  season_n <- tapply(legal_nobait$kg, legal_nobait$Season, length)
-  season_varWbar <- tapply(legal_nobait$kg, legal_nobait$Season, var)/season_n
-  season_seWbar <- sqrt(season_varWbar)
-
-  # combined
-  Wbar <- sum(season_weights*season_Wbar)/sum(season_weights)
-  varWbar <- sum((season_weights^2)*season_varWbar)/(sum(season_weights)^2)
-  seWbar <- sqrt(varWbar)
-  
-  # assuming YP is known without error
-  out <- list()
-  out$y_n <- y_kg/Wbar + y_kg/(Wbar^3)*varWbar
-  var_y_n <- (y_kg^2)/(Wbar^4)*varWbar
-  out$se_y_n <- sqrt(var_y_n)
-  out$ci_y_n <- out$y_n + c(-1,1)*1.96*out$se_y_n
-  
-  return(out)
-}
-ests_null <- weighted_ests(y_kg = msy_null)
-ests_samp <- weighted_ests(y_kg = msy_samp)
-ests_mod <- weighted_ests(y_kg = msy_mod)
-```
-
-Point estimates are compared below, using 50/50 seasonal weighting for illustration.
+Point estimates are compared below, using 50/50 seasonal weighting for illustration.  **I'm not sure if this is correct after incorporating the Lester variance.**
 
 ```{r}
-comptable <- data.frame(Estimate=c("Lake Area", "Catch sampling", "Bayesian"),
-                        W_inf=c(W_inf_null, W_inf_samp, W_inf_mod),
-                        MSY=c(msy_null, msy_samp, msy_mod),
-                        MSY_n=c(ests_null$y_n, ests_samp$y_n, ests_mod$y_n),
-                        MSY_n_50=0.5*c(ests_null$y_n, ests_samp$y_n, ests_mod$y_n))
-knitr::kable(comptable, digits=c(0, 2, 0, 0, 0))
+# comptable <- data.frame(Estimate=c("Lake Area", "Catch sampling", "Bayesian"),
+#                         W_inf=c(W_inf_null, W_inf_samp, W_inf_mod),
+#                         MSY=c(msy_null, msy_samp, msy_mod),
+#                         MSY_n=c(ests_null$y_n, ests_samp$y_n, ests_mod$y_n),
+#                         MSY_n_50=0.5*c(ests_null$y_n, ests_samp$y_n, ests_mod$y_n))
+# knitr::kable(comptable, digits=c(0, 2, 0, 0, 0))
 ```
 
 ```{r}
-p_winter <- seq(from=0, to=1, by=0.1)
-tbl7_null <- tbl7_samp <- tbl7_mod <- 
-  data.frame(`SW` = paste(100*(1-p_winter), 100*p_winter, sep="/"),
-             W=NA, SE_W=NA, 
+# Lester again, with variance
+
+load(file="W_inf_vec.Rdata")
+nsim <- length(W_inf_vec)
+
+Temp <- -3 # direct input
+A <- area  # carried from before
+D_max <- 44.2 # direct input
+D_mn <- 16.5  # direct input
+DR <- D_max/D_mn
+D_th <- 3.26*(A^0.109)*(D_mn^0.213)*exp(-0.0263*Temp)
+pV_hy <- (1-(D_th/D_max))^DR
+pV_eb <- exp(-4.63*pV_hy)
+
+# using Lester Winf
+L_inf <- 957*(1-exp(-0.14*(1+log(A))))
+W_inf_null <- (L_inf/451)^3.2
+
+exponent1 <- rnorm(n=nsim, mean=1.33, sd=0.17)
+exponent2 <- rnorm(n=nsim, mean=0.30, sd=0.04)
+
+S <- 1/(1+exp(2.47+(0.386*Temp)-(16.8*pV_hy)))
+B_msy <- 8.47*(D_mn*pV_eb*S)/(W_inf_null^exponent1)
+M <- 0.26*(exp((0.021*Temp)+(0.0004*(Temp^2))))/(W_inf_null^exponent2)
+msy_ha_null <- B_msy*M
+msy_null <- msy_ha_null*area 
+
+# using sampled Winf
+W_inf_samp <- 6.35  # direct input
+S <- 1/(1+exp(2.47+(0.386*Temp)-(16.8*pV_hy)))
+B_msy <- 8.47*(D_mn*pV_eb*S)/(W_inf_samp^exponent1)
+M <- 0.26*(exp((0.021*Temp)+(0.0004*(Temp^2))))/(W_inf_samp^exponent2)
+msy_ha_samp <- B_msy*M
+msy_samp <- msy_ha_samp*area   
+
+W_inf_mod <- W_inf_vec # median(W_inf_vec)
+S <- 1/(1+exp(2.47+(0.386*Temp)-(16.8*pV_hy)))
+B_msy <- 8.47*(D_mn*pV_eb*S)/(W_inf_mod^exponent1)
+M <- 0.26*(exp((0.021*Temp)+(0.0004*(Temp^2))))/(W_inf_mod^exponent2)
+msy_ha_mod <- B_msy*M
+msy_mod <- msy_ha_mod*area   
+```
+
+```{r}
+tbl7 <- data.frame(`SW` = paste(100*(1-p_winter), 100*p_winter, sep="/"),
+             W=tbl6$W, SE_W=tbl6$SE_W,
              MSY40=NA, MSY50=NA, MSY60=NA, MSY70=NA, MSY80=NA, MSY90=NA, MSY100=NA)
-for(i in 1:length(p_winter)) {
+fig5_ci <- data.frame(ci_lo=rep(NA, length(p_winter)), ci_hi=NA)
+for(i in seq_along(p_winter)) {
   season_weights <- c(1-p_winter[i], p_winter[i])
-  tbl7_null$W[i] <- tbl7_samp$W[i] <- tbl7_mod$W[i] <-
-    sum(season_weights*season_Wbar)/sum(season_weights)
-  tbl7_null$SE_W[i] <- tbl7_samp$SE_W[i] <- tbl7_mod$SE_W[i] <-
-    sqrt(sum((season_weights^2)*season_varWbar)/(sum(season_weights)^2))
-  tbl7_null$MSY100[i] <- 
-    weighted_ests(y_kg=msy_null, season_weights=season_weights)$y_n
-  tbl7_samp$MSY100[i] <- 
-    weighted_ests(y_kg=msy_samp, season_weights=season_weights)$y_n
-  tbl7_mod$MSY100[i] <- 
-    weighted_ests(y_kg=msy_mod, season_weights=season_weights)$y_n
+  tbl7$MSY100[i] <- 
+    weighted_ests(y_kg=median(msy_mod), season_weights=season_weights)$y_n
+  msy_n_vec <- 0.5*msy_mod/(p_winter[i]*winter_boot_mn + (1-p_winter[i])*summer_boot_mn)
+  fig5_ci$ci_lo[i] <- quantile(msy_n_vec, 0.025)
+  fig5_ci$ci_hi[i] <- quantile(msy_n_vec, 0.975)
 }
 for(j in 4:9) {
-  tbl7_null[,j] <- j/10*tbl7_null[,10]
-  tbl7_samp[,j] <- j/10*tbl7_samp[,10]
-  tbl7_mod[,j] <- j/10*tbl7_mod[,10]
+  tbl7[,j] <- j/10*tbl7[,10]
+}
+```
+
+```{r}
+plot_fig5 <- function(est, ci, ...) {
+  par(family="serif")
+  p_winter <- seq(from=0, to=1, length.out=nrow(est))
+  plot(p_winter, est$MSY50, type="l", ylim=range(0,ci),
+       xlab="Seasonal Weights (Summer / Winter)", ylab="50% MSY (n)", xaxt="n",...=...)
+  lines(p_winter, ci$ci_lo, lty=2)
+  lines(p_winter, ci$ci_hi, lty=2)
+  tlabs <- seq(from=0, to=1, by=0.2)
+  axis(side=1, at=1-tlabs, labels=paste0(100*tlabs, "% / ", 100*(1-tlabs), "%"))
+  legend("topright", lty=1:2, legend=c("Estimate", "95% CI"))
 }
 ```
 
 ```{r}
 p_msy <- seq(from=0.4, to=1, by=0.1)
-tbl8_null <- tbl8_samp <- tbl8_mod <- 
-  data.frame(perc_MSY=100*p_msy, MSY_n=NA, SE_MSY_n=NA, Upr_95_CI=NA, Lwr_95_CI=NA)
-for(i in 1:length(p_msy)) {
-  ests_null <- weighted_ests(y_kg=msy_null*p_msy[i])
-  ests_samp <- weighted_ests(y_kg=msy_samp*p_msy[i])
-  ests_mod <- weighted_ests(y_kg=msy_mod*p_msy[i])
-  
-  tbl8_null[i, 2:5] <- unlist(ests_null)
-  tbl8_samp[i, 2:5] <- unlist(ests_samp)
-  tbl8_mod[i, 2:5] <- unlist(ests_mod)
+tbl8 <- data.frame(perc_MSY=100*p_msy, MSY_n=NA, SE_MSY_n=NA, Upr_95_CI=NA, Lwr_95_CI=NA)
+for(i in seq_along(p_msy)) {
+  msy_n_vec <- p_msy[i]*msy_mod/(0.5*winter_boot_mn + 0.5*summer_boot_mn)
+  tbl8$MSY_n[i] <- weighted_ests(y_kg=p_msy[i]*median(msy_mod), season_weights=rep(0.5,2))$y_n
+  tbl8$SE_MSY_n[i] <- sd(msy_n_vec)
+  tbl8$Upr_95_CI[i] <- quantile(msy_n_vec, 0.975)
+  tbl8$Lwr_95_CI[i] <- quantile(msy_n_vec, 0.025)
 }
 ```
 
 ```{r}
-# fig 5
-p_winter <- seq(from=0, to=1, by=0.01)
-fig5_null <- fig5_samp <- fig5_mod <- matrix(nrow=length(p_winter), ncol=4)
-for(i in 1:length(p_winter)) {
-  fig5_null[i,] <- 
-    unlist(weighted_ests(y_kg=0.5*msy_null, season_weights=c(p_winter[i], 1-p_winter[i])))
-  fig5_samp[i,] <- 
-    unlist(weighted_ests(y_kg=0.5*msy_samp, season_weights=c(p_winter[i], 1-p_winter[i])))
-  fig5_mod[i,] <- 
-    unlist(weighted_ests(y_kg=0.5*msy_mod, season_weights=c(p_winter[i], 1-p_winter[i])))
-}
-
-plotfig5 <- function(x, ...) {
-  plot(x=p_winter, y=x[,1], ylim=range(x[,3:4]), type='l', xaxt="n", 
-       ylab="50% MSY (n)", xlab="Seasonal Weights", ...=...)
-  lines(x=p_winter, y=x[,3], lty=2)
-  lines(x=p_winter, y=x[,4], lty=2)
-  legend("topleft", lty=1:2, legend=c("Estimate", "95% CI"))
-  tlabs <- seq(from=0, to=1, by=0.2)
-  axis(side=1, at=tlabs, labels=paste0(100*tlabs, "% / ", 100*(1-tlabs), "%"))
+tbl8_naive <- tbl8
+for(i in seq_along(p_msy)) {
+  xx <- weighted_ests(p_msy[i]*median(msy_mod), season_weights=rep(0.5,2))
+  tbl8_naive$SE_MSY_n[i] <- xx$se_y_n
+  tbl8_naive$Upr_95_CI[i] <- xx$ci_y_n[2]
+  tbl8_naive$Lwr_95_CI[i] <- xx$ci_y_n[1]
 }
 ```
 
 ```{r}
-# fig 6
-p_MSY <- seq(from=0.4, to=1, by=0.01)
-fig6_null <- fig6_samp <- fig6_mod <- matrix(nrow=length(p_MSY), ncol=4)
-for(i in 1:length(p_MSY)) {
-  fig6_null[i,] <- 
-    unlist(weighted_ests(y_kg=p_MSY[i]*msy_null))
-  fig6_samp[i,] <- 
-    unlist(weighted_ests(y_kg=p_MSY[i]*msy_samp))
-  fig6_mod[i,] <- 
-    unlist(weighted_ests(y_kg=p_MSY[i]*msy_mod))
-}
-
-plotfig6 <- function(x, ...) {
-  plot(x=p_MSY, y=x[,1], ylim=range(x[,3:4]), type='l', #xaxt="n", 
-       ylab="Fractional MSY (n)", xlab="Proportion of MSY", ...=...)
-  lines(x=p_MSY, y=x[,3], lty=2)
-  lines(x=p_MSY, y=x[,4], lty=2)
-  legend("topleft", lty=1:2, legend=c("Estimate", "95% CI"))
+plot_fig6 <- function(tab, ...) {
+  par(family="serif")
+  p_msy <- tab$perc_MSY
+  plot(p_msy, tab$MSY_n, type="l", ylim=range(0,tab$Upr_95_CI),
+       xlab="Percent of MSY", ylab="Fractional MSY (n)",...=...)
+  lines(p_msy, tab$Lwr_95_CI, lty=2)
+  lines(p_msy, tab$Upr_95_CI, lty=2)
   # tlabs <- seq(from=0, to=1, by=0.2)
-  # axis(side=1, at=tlabs, labels=paste0(100*tlabs, "% / ", 100*(1-tlabs), "%"))
+  # axis(side=1, at=1-tlabs, labels=paste0(100*tlabs, "% / ", 100*(1-tlabs), "%"))
+  legend("topleft", lty=1:2, legend=c("Estimate", "95% CI"))
 }
+```
+
+```{r}
+knitr::kable(tbl7, digits=c(0,2,2,rep(0,7)))
+```
+
+```{r}
+plot_fig5(est=tbl7, ci=fig5_ci)
+```
+
+```{r}
+knitr::kable(tbl8, digits=0)
+```
+
+```{r}
+knitr::kable(tbl8_naive, digits=c(0,0,1,0,0))
+```
+
+```{r}
+plot_fig6(tab=tbl8)
+```
+
+```{r}
+plot_fig6(tab=tbl8_naive)
+```
+
+```{r}
+# p_winter <- seq(from=0, to=1, by=0.1)
+# tbl7_null <- tbl7_samp <- tbl7_mod <- 
+#   data.frame(`SW` = paste(100*(1-p_winter), 100*p_winter, sep="/"),
+#              W=NA, SE_W=NA, 
+#              MSY40=NA, MSY50=NA, MSY60=NA, MSY70=NA, MSY80=NA, MSY90=NA, MSY100=NA)
+# for(i in 1:length(p_winter)) {
+#   season_weights <- c(1-p_winter[i], p_winter[i])
+#   tbl7_null$W[i] <- tbl7_samp$W[i] <- tbl7_mod$W[i] <-
+#     sum(season_weights*season_Wbar)/sum(season_weights)
+#   tbl7_null$SE_W[i] <- tbl7_samp$SE_W[i] <- tbl7_mod$SE_W[i] <-
+#     sqrt(sum((season_weights^2)*season_varWbar)/(sum(season_weights)^2))
+#   tbl7_null$MSY100[i] <- 
+#     weighted_ests(y_kg=msy_null, season_weights=season_weights)$y_n
+#   tbl7_samp$MSY100[i] <- 
+#     weighted_ests(y_kg=msy_samp, season_weights=season_weights)$y_n
+#   tbl7_mod$MSY100[i] <- 
+#     weighted_ests(y_kg=msy_mod, season_weights=season_weights)$y_n
+# }
+# for(j in 4:9) {
+#   tbl7_null[,j] <- j/10*tbl7_null[,10]
+#   tbl7_samp[,j] <- j/10*tbl7_samp[,10]
+#   tbl7_mod[,j] <- j/10*tbl7_mod[,10]
+# }
+```
+
+```{r}
+# p_msy <- seq(from=0.4, to=1, by=0.1)
+# tbl8_null <- tbl8_samp <- tbl8_mod <- 
+#   data.frame(perc_MSY=100*p_msy, MSY_n=NA, SE_MSY_n=NA, Upr_95_CI=NA, Lwr_95_CI=NA)
+# for(i in 1:length(p_msy)) {
+#   ests_null <- weighted_ests(y_kg=msy_null*p_msy[i])
+#   ests_samp <- weighted_ests(y_kg=msy_samp*p_msy[i])
+#   ests_mod <- weighted_ests(y_kg=msy_mod*p_msy[i])
+#   
+#   tbl8_null[i, 2:5] <- unlist(ests_null)
+#   tbl8_samp[i, 2:5] <- unlist(ests_samp)
+#   tbl8_mod[i, 2:5] <- unlist(ests_mod)
+# }
+```
+
+```{r}
+# # fig 5
+# p_winter <- seq(from=0, to=1, by=0.01)
+# fig5_null <- fig5_samp <- fig5_mod <- matrix(nrow=length(p_winter), ncol=4)
+# for(i in 1:length(p_winter)) {
+#   fig5_null[i,] <- 
+#     unlist(weighted_ests(y_kg=0.5*msy_null, season_weights=c(p_winter[i], 1-p_winter[i])))
+#   fig5_samp[i,] <- 
+#     unlist(weighted_ests(y_kg=0.5*msy_samp, season_weights=c(p_winter[i], 1-p_winter[i])))
+#   fig5_mod[i,] <- 
+#     unlist(weighted_ests(y_kg=0.5*msy_mod, season_weights=c(p_winter[i], 1-p_winter[i])))
+# }
+# 
+# plotfig5 <- function(x, ...) {
+#   plot(x=p_winter, y=x[,1], ylim=range(x[,3:4]), type='l', xaxt="n", 
+#        ylab="50% MSY (n)", xlab="Seasonal Weights", ...=...)
+#   lines(x=p_winter, y=x[,3], lty=2)
+#   lines(x=p_winter, y=x[,4], lty=2)
+#   legend("topleft", lty=1:2, legend=c("Estimate", "95% CI"))
+#   tlabs <- seq(from=0, to=1, by=0.2)
+#   axis(side=1, at=tlabs, labels=paste0(100*tlabs, "% / ", 100*(1-tlabs), "%"))
+# }
+```
+
+```{r}
+# # fig 6
+# p_MSY <- seq(from=0.4, to=1, by=0.01)
+# fig6_null <- fig6_samp <- fig6_mod <- matrix(nrow=length(p_MSY), ncol=4)
+# for(i in 1:length(p_MSY)) {
+#   fig6_null[i,] <- 
+#     unlist(weighted_ests(y_kg=p_MSY[i]*msy_null))
+#   fig6_samp[i,] <- 
+#     unlist(weighted_ests(y_kg=p_MSY[i]*msy_samp))
+#   fig6_mod[i,] <- 
+#     unlist(weighted_ests(y_kg=p_MSY[i]*msy_mod))
+# }
+# 
+# plotfig6 <- function(x, ...) {
+#   plot(x=p_MSY, y=x[,1], ylim=range(x[,3:4]), type='l', #xaxt="n", 
+#        ylab="Fractional MSY (n)", xlab="Proportion of MSY", ...=...)
+#   lines(x=p_MSY, y=x[,3], lty=2)
+#   lines(x=p_MSY, y=x[,4], lty=2)
+#   legend("topleft", lty=1:2, legend=c("Estimate", "95% CI"))
+#   # tlabs <- seq(from=0, to=1, by=0.2)
+#   # axis(side=1, at=tlabs, labels=paste0(100*tlabs, "% / ", 100*(1-tlabs), "%"))
+# }
 ```
 
 \pagebreak
@@ -491,20 +690,20 @@ plotfig6 <- function(x, ...) {
 ### Results with $W_{\infty}$ calculated from lake area (Lester equations)
 
 ```{r}
-dig7 <- c(0, 2, 2, rep(0, 7))
-knitr::kable(tbl7_null, digits=dig7)
+# dig7 <- c(0, 2, 2, rep(0, 7))
+# knitr::kable(tbl7_null, digits=dig7)
 ```
 
 ```{r}
-knitr::kable(tbl8_null, digits=0)
+# knitr::kable(tbl8_null, digits=0)
 ```
 
 ```{r}
-plotfig5(fig5_null)
+# plotfig5(fig5_null)
 ```
 
 ```{r}
-plotfig6(fig6_null)
+# plotfig6(fig6_null)
 ```
 
 \pagebreak
@@ -512,19 +711,19 @@ plotfig6(fig6_null)
 ### Results with $W_{\infty}$ estimated from catch sampling
 
 ```{r}
-knitr::kable(tbl7_samp, digits=dig7)
+# knitr::kable(tbl7_samp, digits=dig7)
 ```
 
 ```{r}
-knitr::kable(tbl8_samp, digits=0)
+# knitr::kable(tbl8_samp, digits=0)
 ```
 
 ```{r}
-plotfig5(fig5_samp)
+# plotfig5(fig5_samp)
 ```
 
 ```{r}
-plotfig6(fig6_samp)
+# plotfig6(fig6_samp)
 ```
 
 \pagebreak
@@ -532,17 +731,17 @@ plotfig6(fig6_samp)
 ### Results with $W_{\infty}$ estimated using integrated Bayesian model
 
 ```{r}
-knitr::kable(tbl7_mod, digits=dig7)
+# knitr::kable(tbl7_mod, digits=dig7)
 ```
 
 ```{r}
-knitr::kable(tbl8_mod, digits=0)
+# knitr::kable(tbl8_mod, digits=0)
 ```
 
 ```{r}
-plotfig5(fig5_mod)
+# plotfig5(fig5_mod)
 ```
 
 ```{r}
-plotfig6(fig6_mod)
+# plotfig6(fig6_mod)
 ```
