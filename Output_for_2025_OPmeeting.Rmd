@@ -322,10 +322,10 @@ for(i in seq_along(p_winter)) {
 ```
 
 ```{r}
-plot_fig4 <- function(tab, ...) {
+plot_fig4 <- function(tab, cilim=0, ...) {
   par(family="serif")
   p_winter <- seq(from=0, to=1, length.out=nrow(tab))
-  plot(p_winter, tab$YPn, type="l", ylim=range(0, tab$upr95_YPn),
+  plot(p_winter, tab$YPn, type="l", ylim=range(cilim, tab$lwr95_YPn, tab$upr95_YPn), #ylim=range(0, tab$upr95_YPn),
        xlab="Seasonal Weights (Summer / Winter)", ylab="YP (n)", xaxt="n",...=...)
   lines(p_winter, tab$lwr95_YPn, lty=2)
   lines(p_winter, tab$upr95_YPn, lty=2)
@@ -352,7 +352,7 @@ knitr::kable(tbl6_naive, digits=c(0,2,2,0,1,0,0))
 ```
 
 ```{r}
-plot_fig4(tbl6_naive)
+plot_fig4(tbl6_naive, cilim=400)
 ```
 
 \pagebreak
@@ -563,16 +563,39 @@ for(j in 4:9) {
 ```
 
 ```{r}
-plot_fig5 <- function(est, ci, ...) {
+plot_fig5 <- function(est, ci, cilim=0, ...) {
   par(family="serif")
   p_winter <- seq(from=0, to=1, length.out=nrow(est))
-  plot(p_winter, est$MSY50, type="l", ylim=range(0,ci),
+  plot(p_winter, est$MSY50, type="l", ylim=range(cilim, ci),#ylim=range(0,ci),
        xlab="Seasonal Weights (Summer / Winter)", ylab="50% MSY (n)", xaxt="n",...=...)
   lines(p_winter, ci$ci_lo, lty=2)
   lines(p_winter, ci$ci_hi, lty=2)
   tlabs <- seq(from=0, to=1, by=0.2)
   axis(side=1, at=1-tlabs, labels=paste0(100*tlabs, "% / ", 100*(1-tlabs), "%"))
   legend("topright", lty=1:2, legend=c("Estimate", "95% CI"))
+}
+```
+
+```{r}
+plot_fig45 <- function(tab, est, ci, cilim=0, ...) {
+  par(family="serif")
+  p_winter <- seq(from=0, to=1, length.out=nrow(tab))
+  plot(p_winter, tab$YPn, type="l", ylim=range(cilim, tab$lwr95_YPn, tab$upr95_YPn, ci),
+       xlab="Seasonal Weights (Summer / Winter)", ylab="n fish", xaxt="n",col=2, lwd=2, ...=...)
+  # lines(p_winter, tab$lwr95_YPn, lty=2)
+  # lines(p_winter, tab$upr95_YPn, lty=2)
+  polygon(x=c(p_winter, rev(p_winter)), y=c(tab$lwr95_YPn, rev(tab$upr95_YPn)), 
+          border=NA, col=adjustcolor(2, alpha.f=.3))
+  
+  lines(p_winter, est$MSY50, col=4, lwd=2)
+  polygon(x=c(p_winter, rev(p_winter)), y=c(ci$ci_lo, rev(ci$ci_hi)), 
+          border=NA, col=adjustcolor(4, alpha.f=.3))
+  
+  tlabs <- seq(from=0, to=1, by=0.2)
+  axis(side=1, at=1-tlabs, labels=paste0(100*tlabs, "% / ", 100*(1-tlabs), "%"))
+  # legend("topright", lty=1:2, legend=c("Estimate", "95% CI"))
+  legend("topright", border=c(2,4), fill=c(adjustcolor(2, alpha.f=.3), adjustcolor(4, alpha.f=.3)),
+         legend=c("YP (LAM)", "50% MSY (Lester)"))
 }
 ```
 
@@ -639,7 +662,7 @@ plot_fig6(tab=tbl8)
 ### Lester Results: treating Lester-estimated MSY as known without error
 
 ```{r}
-plot_fig5(est=tbl7, ci=fig5_ci_naive)
+plot_fig5(est=tbl7, ci=fig5_ci_naive, cilim=200)
 ```
 
 ```{r}
@@ -654,6 +677,32 @@ knitr::kable(tbl8_naive, digits=c(0,0,1,0,0))
 
 ```{r}
 plot_fig6(tab=tbl8_naive)
+```
+
+\pagebreak
+
+### Both models, incorporating model error
+
+```{r}
+plot_fig45(tbl6, est=tbl7, ci=fig5_ci)
+```
+
+```{r, fig.width=10, fig.height=7}
+par(mfrow=c(1,2))
+plot_fig4(tbl6, cilim=c(0,3200))
+plot_fig5(est=tbl7, ci=fig5_ci, cilim=c(0,3200))
+```
+
+### Both models, ignoring model error
+
+```{r}
+plot_fig45(tbl6_naive, est=tbl7, ci=fig5_ci_naive, cilim=200)
+```
+
+```{r, fig.width=10, fig.height=7}
+par(mfrow=c(1,2))
+plot_fig4(tbl6_naive, cilim=c(200, 850))
+plot_fig5(est=tbl7, ci=fig5_ci_naive, cilim=c(200, 850))
 ```
 
 ```{r}
