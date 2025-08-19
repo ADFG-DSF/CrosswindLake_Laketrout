@@ -681,6 +681,64 @@ plot_fig6(tab=tbl8_naive)
 
 \pagebreak
 
+### Illustrating the sensitivity of Lester inferences to $W_{\infty}$
+
+```{r}
+## here comes Lester stuff!
+Temp <- -3 # direct input
+A <- area  # carried from before
+D_max <- 44.2 # direct input
+D_mn <- 16.5  # direct input
+DR <- D_max/D_mn
+D_th <- 3.26*(A^0.109)*(D_mn^0.213)*exp(-0.0263*Temp)
+pV_hy <- (1-(D_th/D_max))^DR
+pV_eb <- exp(-4.63*pV_hy)
+
+# using Lester Winf
+L_inf <- 957*(1-exp(-0.14*(1+log(A))))
+W_inf_null <- (L_inf/451)^3.2
+
+S <- 1/(1+exp(2.47+(0.386*Temp)-(16.8*pV_hy)))
+B_msy <- 8.47*(D_mn*pV_eb*S)/(W_inf_null^1.33)
+M <- 0.26*(exp((0.021*Temp)+(0.0004*(Temp^2))))/(W_inf_null^0.30)
+msy_ha_null <- B_msy*M
+msy_null <- msy_ha_null*area 
+
+# defining a sequence of trial values of W_inf
+W_inf_trial <- seq(from=0, to=12, by=0.1)
+S <- 1/(1+exp(2.47+(0.386*Temp)-(16.8*pV_hy)))
+B_msy <- 8.47*(D_mn*pV_eb*S)/(W_inf_trial^1.33)
+M <- 0.26*(exp((0.021*Temp)+(0.0004*(Temp^2))))/(W_inf_trial^0.30)
+msy_ha_samp <- B_msy*M
+msy_samp <- msy_ha_samp*area   
+msy_n <- msy_samp/tbl6$W[tbl6$SW=="50/50"]
+ 
+par(mfrow=c(1,1))
+par(family="serif")
+plot(W_inf_trial, msy_n, type='l',
+     xlab="Asymptotic Weight (kg)", ylab="MSY (n)",
+     ylim=c(0, 2000), xlim=range(0, W_inf_trial))
+
+# defining a sequence of trial values of W_inf to highlight
+W_inf_trial <- c(W_inf_null, W_inf_samp, median(W_inf_mod))
+S <- 1/(1+exp(2.47+(0.386*Temp)-(16.8*pV_hy)))
+B_msy <- 8.47*(D_mn*pV_eb*S)/(W_inf_trial^1.33)
+M <- 0.26*(exp((0.021*Temp)+(0.0004*(Temp^2))))/(W_inf_trial^0.30)
+msy_ha_samp <- B_msy*M
+msy_samp <- msy_ha_samp*area   
+msy_n <- msy_samp/tbl6$W[tbl6$SW=="50/50"]
+
+points(W_inf_trial, msy_n, pch=16)
+segments(y0=msy_n, x0=-W_inf_trial, x1=W_inf_trial, lty=2)
+segments(y0=msy_n, y1=-msy_n, x0=W_inf_trial, lty=2)
+
+text(x=W_inf_trial, y=msy_n + c(20, 30, 120), pos=4,
+     labels=paste0("W_inf = ", round(W_inf_trial, 2), ",",
+                   " MSY (n) = ", round(msy_n, 0)))
+```
+
+\pagebreak
+
 ### Both models, incorporating model error
 
 ```{r}
