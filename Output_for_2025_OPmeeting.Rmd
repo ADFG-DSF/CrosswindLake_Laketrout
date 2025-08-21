@@ -444,7 +444,7 @@ A minimum estimate of the variance in Lester model results for Crosswind Lake wa
 Temp <- -3 # direct input
 A <- area  # carried from before
 D_max <- 44.2 # direct input
-D_mn <- 16.5  # direct input
+D_mn <- 16.4 # 16.5  # direct input     - SHOULD BE 16.4 APPARENTLY
 DR <- D_max/D_mn
 D_th <- 3.26*(A^0.109)*(D_mn^0.213)*exp(-0.0263*Temp)
 pV_hy <- (1-(D_th/D_max))^DR
@@ -504,14 +504,14 @@ msy_mod <- msy_ha_mod*area
 load(file="W_inf_vec.Rdata")
 nsim <- length(W_inf_vec)
 
-Temp <- -3 # direct input
-A <- area  # carried from before
-D_max <- 44.2 # direct input
-D_mn <- 16.5  # direct input
-DR <- D_max/D_mn
-D_th <- 3.26*(A^0.109)*(D_mn^0.213)*exp(-0.0263*Temp)
-pV_hy <- (1-(D_th/D_max))^DR
-pV_eb <- exp(-4.63*pV_hy)
+# Temp <- -3 # direct input
+# A <- area  # carried from before
+# D_max <- 44.2 # direct input
+# D_mn <- 16.5  # direct input
+# DR <- D_max/D_mn
+# D_th <- 3.26*(A^0.109)*(D_mn^0.213)*exp(-0.0263*Temp)
+# pV_hy <- (1-(D_th/D_max))^DR
+# pV_eb <- exp(-4.63*pV_hy)
 
 # using Lester Winf
 L_inf <- 957*(1-exp(-0.14*(1+log(A))))
@@ -685,14 +685,14 @@ plot_fig6(tab=tbl8_naive)
 
 ```{r}
 ## here comes Lester stuff!
-Temp <- -3 # direct input
-A <- area  # carried from before
-D_max <- 44.2 # direct input
-D_mn <- 16.5  # direct input
-DR <- D_max/D_mn
-D_th <- 3.26*(A^0.109)*(D_mn^0.213)*exp(-0.0263*Temp)
-pV_hy <- (1-(D_th/D_max))^DR
-pV_eb <- exp(-4.63*pV_hy)
+# Temp <- -3 # direct input
+# A <- area  # carried from before
+# D_max <- 44.2 # direct input
+# D_mn <- 16.5  # direct input
+# DR <- D_max/D_mn
+# D_th <- 3.26*(A^0.109)*(D_mn^0.213)*exp(-0.0263*Temp)
+# pV_hy <- (1-(D_th/D_max))^DR
+# pV_eb <- exp(-4.63*pV_hy)
 
 # using Lester Winf
 L_inf <- 957*(1-exp(-0.14*(1+log(A))))
@@ -711,7 +711,8 @@ B_msy <- 8.47*(D_mn*pV_eb*S)/(W_inf_trial^1.33)
 M <- 0.26*(exp((0.021*Temp)+(0.0004*(Temp^2))))/(W_inf_trial^0.30)
 msy_ha_samp <- B_msy*M
 msy_samp <- msy_ha_samp*area   
-msy_n <- msy_samp/tbl6$W[tbl6$SW=="50/50"]
+# msy_n <- msy_samp/tbl6$W[tbl6$SW=="50/50"]
+msy_n <- suppressWarnings(weighted_ests(msy_samp)$y_n)
  
 par(mfrow=c(1,1))
 par(family="serif")
@@ -726,14 +727,15 @@ B_msy <- 8.47*(D_mn*pV_eb*S)/(W_inf_trial^1.33)
 M <- 0.26*(exp((0.021*Temp)+(0.0004*(Temp^2))))/(W_inf_trial^0.30)
 msy_ha_samp <- B_msy*M
 msy_samp <- msy_ha_samp*area   
-msy_n <- msy_samp/tbl6$W[tbl6$SW=="50/50"]
+# msy_n <- msy_samp/tbl6$W[tbl6$SW=="50/50"]
+msy_n <- suppressWarnings(weighted_ests(msy_samp)$y_n)
 
 points(W_inf_trial, msy_n, pch=16)
 segments(y0=msy_n, x0=-W_inf_trial, x1=W_inf_trial, lty=2)
 segments(y0=msy_n, y1=-msy_n, x0=W_inf_trial, lty=2)
 
 text(x=W_inf_trial, y=msy_n + c(20, 30, 120), pos=4,
-     labels=paste0("W_inf = ", round(W_inf_trial, 2), ",",
+     labels=paste0("W_inf = ", formatC(W_inf_trial, digits=2, format="f"), ",",
                    " MSY (n) = ", round(msy_n, 0)))
 ```
 
