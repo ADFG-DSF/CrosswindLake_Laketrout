@@ -34,4 +34,8 @@ This study will use 2 different models to estimate sustainable yield of lake tro
 
 - **/R ** contains R code
 
+### **Output_for_2025_OPmeeting.Rmd** is a Mardown report containing the final analyses.
+
+It was originally written in preparation for the Operational Plan meeting in Spring 2025, but was repurposed to serve as the final analysis reported in the **2025 FDS report**.
+
 ### BOF_2024.Rmd is a Markdown report summarizing the work within **/BOF_2024**

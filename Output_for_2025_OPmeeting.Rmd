@@ -469,12 +469,12 @@ msy_ha_samp <- B_msy*M
 msy_samp <- msy_ha_samp*area   
 
 load(file="W_inf_vec.Rdata")
-W_inf_mod <- median(W_inf_vec)
+W_inf_mod_pt <- median(W_inf_vec)
 S <- 1/(1+exp(2.47+(0.386*Temp)-(16.8*pV_hy)))
-B_msy <- 8.47*(D_mn*pV_eb*S)/(W_inf_mod^1.33)
-M <- 0.26*(exp((0.021*Temp)+(0.0004*(Temp^2))))/(W_inf_mod^0.30)
+B_msy <- 8.47*(D_mn*pV_eb*S)/(W_inf_mod_pt^1.33)
+M <- 0.26*(exp((0.021*Temp)+(0.0004*(Temp^2))))/(W_inf_mod_pt^0.30)
 msy_ha_mod <- B_msy*M
-msy_mod <- msy_ha_mod*area   
+msy_mod_pt <- msy_ha_mod*area   
 ```
 
 ```{r}
@@ -543,6 +543,23 @@ msy_mod <- msy_ha_mod*area
 ```
 
 ```{r}
+# tbl7 <- data.frame(`SW` = paste(100*(1-p_winter), 100*p_winter, sep="/"),
+#              W=tbl6$W, SE_W=tbl6$SE_W,
+#              MSY40=NA, MSY50=NA, MSY60=NA, MSY70=NA, MSY80=NA, MSY90=NA, MSY100=NA)
+# fig5_ci <- fig5_ci_naive <- data.frame(ci_lo=rep(NA, length(p_winter)), ci_hi=NA)
+# for(i in seq_along(p_winter)) {
+#   season_weights <- c(1-p_winter[i], p_winter[i])
+#   tbl7$MSY100[i] <- 
+#     weighted_ests(y_kg=median(msy_mod), season_weights=season_weights)$y_n
+#   msy_n_vec <- 0.5*msy_mod/(p_winter[i]*winter_boot_mn + (1-p_winter[i])*summer_boot_mn)
+#   fig5_ci$ci_lo[i] <- quantile(msy_n_vec, 0.025)
+#   fig5_ci$ci_hi[i] <- quantile(msy_n_vec, 0.975)
+#   fig5_ci_naive$ci_lo[i] <- weighted_ests(y_kg=0.5*median(msy_mod), season_weights=season_weights)$ci_y_n[1]
+#   fig5_ci_naive$ci_hi[i] <- weighted_ests(y_kg=0.5*median(msy_mod), season_weights=season_weights)$ci_y_n[2]
+# }
+# for(j in 4:9) {
+#   tbl7[,j] <- j/10*tbl7[,10]
+# }
 tbl7 <- data.frame(`SW` = paste(100*(1-p_winter), 100*p_winter, sep="/"),
              W=tbl6$W, SE_W=tbl6$SE_W,
              MSY40=NA, MSY50=NA, MSY60=NA, MSY70=NA, MSY80=NA, MSY90=NA, MSY100=NA)
@@ -550,12 +567,12 @@ fig5_ci <- fig5_ci_naive <- data.frame(ci_lo=rep(NA, length(p_winter)), ci_hi=NA
 for(i in seq_along(p_winter)) {
   season_weights <- c(1-p_winter[i], p_winter[i])
   tbl7$MSY100[i] <- 
-    weighted_ests(y_kg=median(msy_mod), season_weights=season_weights)$y_n
+    weighted_ests(y_kg=msy_mod_pt, season_weights=season_weights)$y_n
   msy_n_vec <- 0.5*msy_mod/(p_winter[i]*winter_boot_mn + (1-p_winter[i])*summer_boot_mn)
   fig5_ci$ci_lo[i] <- quantile(msy_n_vec, 0.025)
   fig5_ci$ci_hi[i] <- quantile(msy_n_vec, 0.975)
-  fig5_ci_naive$ci_lo[i] <- weighted_ests(y_kg=0.5*median(msy_mod), season_weights=season_weights)$ci_y_n[1]
-  fig5_ci_naive$ci_hi[i] <- weighted_ests(y_kg=0.5*median(msy_mod), season_weights=season_weights)$ci_y_n[2]
+  fig5_ci_naive$ci_lo[i] <- weighted_ests(y_kg=0.5*msy_mod_pt, season_weights=season_weights)$ci_y_n[1]
+  fig5_ci_naive$ci_hi[i] <- weighted_ests(y_kg=0.5*msy_mod_pt, season_weights=season_weights)$ci_y_n[2]
 }
 for(j in 4:9) {
   tbl7[,j] <- j/10*tbl7[,10]
@@ -600,11 +617,20 @@ plot_fig45 <- function(tab, est, ci, cilim=0, ...) {
 ```
 
 ```{r}
+# p_msy <- seq(from=0.4, to=1, by=0.1)
+# tbl8 <- data.frame(perc_MSY=100*p_msy, MSY_n=NA, SE_MSY_n=NA, Lwr_95_CI=NA, Upr_95_CI=NA)
+# for(i in seq_along(p_msy)) {
+#   msy_n_vec <- p_msy[i]*msy_mod/(0.5*winter_boot_mn + 0.5*summer_boot_mn)
+#   tbl8$MSY_n[i] <- weighted_ests(y_kg=p_msy[i]*median(msy_mod), season_weights=rep(0.5,2))$y_n
+#   tbl8$SE_MSY_n[i] <- sd(msy_n_vec)
+#   tbl8$Upr_95_CI[i] <- quantile(msy_n_vec, 0.975)
+#   tbl8$Lwr_95_CI[i] <- quantile(msy_n_vec, 0.025)
+# }
 p_msy <- seq(from=0.4, to=1, by=0.1)
 tbl8 <- data.frame(perc_MSY=100*p_msy, MSY_n=NA, SE_MSY_n=NA, Lwr_95_CI=NA, Upr_95_CI=NA)
 for(i in seq_along(p_msy)) {
   msy_n_vec <- p_msy[i]*msy_mod/(0.5*winter_boot_mn + 0.5*summer_boot_mn)
-  tbl8$MSY_n[i] <- weighted_ests(y_kg=p_msy[i]*median(msy_mod), season_weights=rep(0.5,2))$y_n
+  tbl8$MSY_n[i] <- weighted_ests(y_kg=p_msy[i]*msy_mod_pt, season_weights=rep(0.5,2))$y_n
   tbl8$SE_MSY_n[i] <- sd(msy_n_vec)
   tbl8$Upr_95_CI[i] <- quantile(msy_n_vec, 0.975)
   tbl8$Lwr_95_CI[i] <- quantile(msy_n_vec, 0.025)
@@ -612,9 +638,16 @@ for(i in seq_along(p_msy)) {
 ```
 
 ```{r}
+# tbl8_naive <- tbl8
+# for(i in seq_along(p_msy)) {
+#   xx <- weighted_ests(p_msy[i]*median(msy_mod), season_weights=rep(0.5,2))
+#   tbl8_naive$SE_MSY_n[i] <- xx$se_y_n
+#   tbl8_naive$Upr_95_CI[i] <- xx$ci_y_n[2]
+#   tbl8_naive$Lwr_95_CI[i] <- xx$ci_y_n[1]
+# }
 tbl8_naive <- tbl8
 for(i in seq_along(p_msy)) {
-  xx <- weighted_ests(p_msy[i]*median(msy_mod), season_weights=rep(0.5,2))
+  xx <- weighted_ests(p_msy[i]*msy_mod_pt, season_weights=rep(0.5,2))
   tbl8_naive$SE_MSY_n[i] <- xx$se_y_n
   tbl8_naive$Upr_95_CI[i] <- xx$ci_y_n[2]
   tbl8_naive$Lwr_95_CI[i] <- xx$ci_y_n[1]
